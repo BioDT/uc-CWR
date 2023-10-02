@@ -48,8 +48,10 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# Data folder
+# Folders with Data
 Data/*
+Exports/*
+Logo/*
 
 # DS Store for mac coding
 **/.DS_Store
