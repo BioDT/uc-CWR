@@ -17,10 +17,19 @@ package_vec <- c(
 	"terra", # for alternative raster handling
 	"rgbif", # for gbif access
 	"sf", # for spatialfeatures
+	"sp", # for spatialpoints and polygons
+	"rnaturalearth", # for landmask
 	"parallel", # for parallel runs
 	"pbapply" # for parallelised apply functions and estimators
 )
 sapply(package_vec, install.load.package)
+
+### NON-CRAN PACKAGES ----
+if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
+	devtools::install_github("ErikKusch/KrigR")
+}
+library(KrigR)
 
 `%nin%` <- Negate(`%in%`) # a function for negation of %in% function
 
@@ -32,6 +41,15 @@ if(as.character(options("gbif_email")) == "NULL" ){
 	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
 if(as.character(options("gbif_pwd")) == "NULL" ){
 	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
+
+if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
+	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
+	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
+} # end of CDS API check
+# NUMBER OF CORES
+if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
+	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
+} # end of Core check
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
 # queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object
@@ -125,4 +143,91 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	save_ls
 }
 
-
+# BIOCLIMATIC VARIABLE DOWNLOAD --------------------------------------------
+FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
+	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
+	
+	if(file.exists(FNAME)){
+		BV_ras <- stack(FNAME)
+		names(BV_ras) <- paste0("BIO", 1:19)
+		warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		return(BV_ras)
+	}
+	
+	Month_seq <- seq(as.Date(paste0(T_Start, "-01-01")), as.Date(paste0(T_End, "-12-31")), by = "month")
+	Month_seq <- strsplit(x = as.character(Month_seq), split = "-")
+	
+	### Raw soil moisture level data ----
+	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. These are then summed up and used in the bioclimatic variable computation of KrigR
+	if(length(list.files(Dir, pattern = "volumetric_soil_water_layer_1")) != length(Month_seq)){
+		#### Downloading ####
+		Qsoil1_ras <- download_ERA(
+			Variable = "volumetric_soil_water_layer_1",
+			DataSet = "era5",
+			DateStart = paste0(T_Start, "-01-01"),
+			DateStop = paste0(T_End, "-12-31"),
+			Dir = Dir,
+			FileName = "Qsoil1",
+			API_User = API_User,
+			API_Key = API_Key,
+			SingularDL = TRUE,
+			TimeOut = Inf
+		)
+		
+		Qsoil2_ras <- download_ERA(
+			Variable = "volumetric_soil_water_layer_2",
+			DataSet = "era5",
+			DateStart = paste0(T_Start, "-01-01"),
+			DateStop = paste0(T_End, "-12-31"),
+			Dir = Dir,
+			FileName = "Qsoil2",
+			API_User = API_User,
+			API_Key = API_Key,
+			SingularDL = TRUE
+		)
+		
+		#### Combining ####
+		QSoilCombin_ras <- rast(Qsoil1_ras)+rast(Qsoil2_ras)
+		
+		#### Saving ####
+		for(MonthSave_iter in 1:nlyr(QSoilCombin_ras)){
+			FNAME <- file.path(Dir, paste0("volumetric_soil_water_layer_1-mean-", Month_seq[[MonthSave_iter]][1], "_", Month_seq[[MonthSave_iter]][2], "MonthlyBC.nc"))
+			terra::writeCDF(QSoilCombin_ras[[MonthSave_iter]], filename = FNAME, overwrite = TRUE)
+		}
+		
+		### Deleting unnecessary files ####
+		unlink(list.files(Dir, pattern = "Qsoil", full.names = TRUE))
+	}
+	
+	### Bioclimatic data ----
+	if(file.exists(file.path(Dir, "Qsoil_BC.nc"))){
+		BV_ras <- stack(file.path(Dir, "Qsoil_BC.nc"))
+	}else{
+		BV_ras <- BioClim(
+			DataSet = "era5",
+			Water_Var = "volumetric_soil_water_layer_1",
+			Y_start = T_Start,
+			Y_end = T_End,
+			Dir = Dir,
+			Keep_Monthly = TRUE,
+			FileName = "Qsoil_BC.nc",
+			API_User = API_User,
+			API_Key = API_Key,
+			Cores = numberOfCores,
+			TimeOut = Inf,
+			SingularDL = FALSE
+		)
+	}
+	
+	### Masking ####
+	Land_sp <- ne_countries(type = "countries", scale = "medium")
+	BV_ras <- crop(BV_ras, extent(Land_sp))
+	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
+	BV_ras <- mask(BV_ras, BV_mask)
+	
+	### Saving ####
+	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
+	unlink(file.path(Dir, "Qsoil_BC.nc"))
+	names(BV_ras) <- paste0("BIO", 1:19)
+	BV_ras
+}
