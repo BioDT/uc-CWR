@@ -57,6 +57,8 @@ BV_ras <- FUN.DownBV(T_Start = 1985, T_End = 2015,
 #' For relating SDM outputs to other characteristics of interest to users
 PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
 PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+PH_stack <- stack(PH_nutrient, PH_toxicity)
+names(PH_stack) <- c("Nutrient", "Toxicity")
 
 ## SDM Data Preparations --------------------------------------------------
 SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, BV_ras = BV_ras, 

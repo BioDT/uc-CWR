@@ -113,13 +113,14 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 	FNAME <- file.path(Dir, paste0(strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], ".RData"))
 	Dir.Temp <- file.path(Dir, paste("TEMP", strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], sep = "_"))
 	
-	if(file.exists(FNAME) & !force){
+	if(file.exists(FNAME) & !Force){
 		load(FNAME)
 		warning("Models have already been executed with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(SDMModel_ls)
 	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, FUN = function(SDMModel_Iter){
+		PA_df <- SDMModel_iter$PA
 		species_iden <- unique(PA_df$species[PA_df$PRESENCE == 1])
 		FNAMEInner <- file.path(Dir.Temp, paste0("SDM_", species_iden,".RData"))
 		print(species_iden)
