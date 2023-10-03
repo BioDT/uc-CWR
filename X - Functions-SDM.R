@@ -11,11 +11,6 @@
 #' ####################################################################### #
 
 # PACKAGES -----------------------------------------------------------------
-install.load.package <- function(x) {
-	if (!require(x, character.only = TRUE))
-		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
-}
 package_vec <- c(
 	"sdm", # for sdm functionality
 	"usdm", # for vifcor
@@ -32,10 +27,10 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 														Force = FALSE # whether to force re-running
 														){
 	
-	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], ".RData"))
+	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
-		load(FNAME)
+		loadObj(FNAME)
 		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(return_ls)
 	}
@@ -99,7 +94,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		list(PA = PA_df,
 				 SDMData = data_SDM)
 	})	
-	save(return_ls, file = FNAME)
+	saveObj(return_ls, file = FNAME)
 	return_ls
 }
 
@@ -110,11 +105,11 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 														Force = FALSE # whether to force re-running
 ){
 	
-	FNAME <- file.path(Dir, paste0(strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], ".RData"))
+	FNAME <- file.path(Dir, paste0(strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], "_SDM.RData"))
 	Dir.Temp <- file.path(Dir, paste("TEMP", strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], sep = "_"))
 	
 	if(file.exists(FNAME) & !Force){
-		load(FNAME)
+		loadObj(FNAME)
 		warning("Models have already been executed with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(SDMModel_ls)
 	}
@@ -126,7 +121,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		print(species_iden)
 		
 		if(file.exists(FNAMEInner)){
-			load(FNAMEInner)
+			loadObj(FNAMEInner)
 		}else{
 			SDMModel_Iter <- SDMData_ls[[1]]
 			data_SDM <- SDMModel_Iter$SDMData
@@ -148,13 +143,57 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 			return_ls <- list(model = model_SDM,
 												ensemble_SDM = ensemble_SDM,
 												evalalutation = eval_SDM)
-			save(return_ls, file = FNAMEInner)
+			saveObj(return_ls, file = FNAMEInner)
 		}
 		return_ls
 	})
-	save(SDMModel_ls, file = FNAME)
-	unlink(Dir.Temp)
+	saveObj(SDMModel_ls, file = FNAME)
+	unlink(Dir.Temp, recursive = TRUE)
 	SDMModel_ls
 }
 
-# SDM EVALUATION FUNCTION --------------------------------------------------
+# SDM PREDICTION FUNCTION --------------------------------------------------
+FUN.PredSDM <- function(SDMModel_ls, BV_ras, Dir, Force = FALSE){
+	FNAME <- file.path(Dir, paste0(strsplit(names(SDMModel_ls)[1], split = " ")[[1]][1], "_PRED.RData"))
+	if(file.exists(FNAME)){
+		loadObj(FNAME)
+		warning("Predictions have already been made for this Genus previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		return(SDMPred_ls)
+	}
+	
+	Dir.Genus <- file.path(Dir, paste0(strsplit(names(SDMModel_ls)[1], split = " ")[[1]][1], "_predictions"))
+	if(!dir.exists(Dir.Genus)){dir.create(Dir.Genus)}
+	
+	## removing non-executable model species
+	NonNAs <- unlist(lapply(SDMModel_ls, FUN = function(x){!is.na(x$model)}))
+	SDMModel_ls <- SDMModel_ls[NonNAs]
+	
+	## prediction and binarisation
+	SDMPred_ls <- pblapply(names(SDMModel_ls), FUN = function(Species_iter){
+		print(Species_iter)
+		FNAMEInner <- file.path(Dir.Genus, paste0(Species_iter))
+		SDMPred_iter <- SDMModel_ls[[Species_iter]]
+		if(file.exists(paste0(FNAMEInner, ".RData"))){
+			loadObj(paste0(FNAMEInner, ".RData"))
+		}else{
+			prediction_SDM <- predict(SDMPred_iter$model, BV_ras, 
+																filename = FNAMEInner, overwrite = TRUE)
+			# this block is needed to load fully into memory
+			modelnames <- names(prediction_SDM) # keep names
+			prediction_SDM <- stack(FNAMEInner) # index on drive
+			prediction_SDM <- readAll(prediction_SDM) # load fully from file
+			names(prediction_SDM) <- modelnames # assign names back on
+			binarised_SDM <- prediction_SDM > SDMPred_iter$evalalutation$threshold # is this correct?!
+			proportion_SDM <- sum(binarised_SDM)/nlayers(binarised_SDM)
+			Inner_ls <- list(prediction = prediction_SDM,
+											 binarised = binarised_SDM,
+											 proportion = proportion_SDM)
+			saveObj(Inner_ls, paste0(FNAMEInner, ".RData"))
+		}
+		Inner_ls
+	})
+	names(SDMPred_ls) <- names(SDMModel_ls)
+	saveObj(SDMPred_ls, file = FNAME)
+	unlink(Dir.Genus, recursive = TRUE)
+	SDMPred_ls
+}
