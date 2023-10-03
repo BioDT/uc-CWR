@@ -2,17 +2,13 @@
 #' PROJECT: [BioDT CWR] 
 #' CONTENTS: 
 #'  - GBIF Data Download Functionality
+#'  - Bioclimativ Variable Climatology creation for qsoil1 anbd qsoil2 combined
 #'  DEPENDENCIES:
 #'  - None
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
 
 # PACKAGES -----------------------------------------------------------------
-install.load.package <- function(x) {
-	if (!require(x, character.only = TRUE))
-		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
-}
 package_vec <- c(
 	"terra", # for alternative raster handling
 	"rgbif", # for gbif access
@@ -30,8 +26,6 @@ if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 	devtools::install_github("ErikKusch/KrigR")
 }
 library(KrigR)
-
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
 
 # REGISTER API CREDENTIALS -------------------------------------------------
 try(source("X - PersonalSettings.R")) 
@@ -62,9 +56,9 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	species <- strsplit(input_species, " ")[[1]]
 	
 	## Filename and data presence check
-	FNAME <- file.path(Dir, paste0(input_species, ".RData"))
+	FNAME <- file.path(Dir, paste0(species[1], ".RData"))
 		if(!Force & file.exists(FNAME)){
-			load(FNAME)
+			loadObj(FNAME)
 			warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 			return(save_ls)
 			}
@@ -138,7 +132,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	names(specs_ls) <- GBIF_specs
 	save_ls <- list(meta = occ_meta,
 									 occs = specs_ls)
-	save(save_ls, file = FNAME)
+	saveObj(save_ls, file = FNAME)
 	unlink(occ_get) # removes .zip file
 	save_ls
 }
@@ -163,7 +157,7 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 		#### Downloading ####
 		Qsoil1_ras <- download_ERA(
 			Variable = "volumetric_soil_water_layer_1",
-			DataSet = "era5",
+			DataSet = "era5-land",
 			DateStart = paste0(T_Start, "-01-01"),
 			DateStop = paste0(T_End, "-12-31"),
 			Dir = Dir,
@@ -176,7 +170,7 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 		
 		Qsoil2_ras <- download_ERA(
 			Variable = "volumetric_soil_water_layer_2",
-			DataSet = "era5",
+			DataSet = "era5-land",
 			DateStart = paste0(T_Start, "-01-01"),
 			DateStop = paste0(T_End, "-12-31"),
 			Dir = Dir,
@@ -204,7 +198,7 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 		BV_ras <- stack(file.path(Dir, "Qsoil_BC.nc"))
 	}else{
 		BV_ras <- BioClim(
-			DataSet = "era5",
+			DataSet = "era5-land",
 			Water_Var = "volumetric_soil_water_layer_1",
 			Y_start = T_Start,
 			Y_end = T_End,
