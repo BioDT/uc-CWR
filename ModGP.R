@@ -37,9 +37,33 @@ package_vec <- c(
 sapply(package_vec, install.load.package)
 
 ## Functionality ----------------------------------------------------------
+`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
+
+#' Progress bar for data loading
+saveObj <- function(object, file.name){
+	outfile <- file(file.name, "wb")
+	serialize(object, outfile)
+	close(outfile)
+}
+loadObj <- function(file.name){
+	library(foreach)
+	filesize <- file.info(file.name)$size
+	chunksize <- ceiling(filesize / 100)
+	pb <- txtProgressBar(min = 0, max = 100, style=3)
+	infile <- file(file.name, "rb")
+	data <- foreach(it = icount(100), .combine = c) %do% {
+		setTxtProgressBar(pb, it)
+		readBin(infile, "raw", chunksize)
+	}
+	close(infile)
+	close(pb)
+	return(unserialize(data))
+}
+
+## Sourcing ---------------------------------------------------------------
 source("X - Functions-Data.R")
 source("X - Functions-SDM.R")
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
+source("X - Functions-Outputs.R")
 
 # DATA ====================================================================
 ## GBIF Data --------------------------------------------------------------
@@ -72,11 +96,14 @@ SDMModel_ls <- FUN.ExecSDM(SDMData_ls = SDMInput_ls, BV_ras = BV_ras,
 													 Dir = Dir.Exports, Force = FALSE)
 
 ## SDM Prediction ---------------------------------------------------------
+SDMPred_ls <- FUN.PredSDM(SDMModel_ls = SDMModel_ls, BV_ras = BV_ras,
+											 Dir = Dir.Exports, Force = FALSE)
 
-# EXPORT ==================================================================
-## Results ----------------------------------------------------------------
-save(p1, file = file.path(Dir.Data, paste0(spec_name, "_pred.Rdata")))
-save(ev, file = file.path(Dir.Data, paste0(spec_name, "_eval.Rdata")))
-
+# OUTPUTS =================================================================
 ## Plotting ---------------------------------------------------------------
-## Data -------------------------------------------------------------------
+SDM_viz <- FUN.Viz(SDMModel_ls = SDMModel_ls, SDMInput_ls = SDMInput_ls, BV_ras = BV_ras,
+				Dir = Dir.Exports)
+
+## Posthoc ----------------------------------------------------------------
+Posthoc_viz <- FUN.Posthoc(SDMModel_ls = SDMModel_ls, Covariates = PH_stack, CutOff = 0.6,
+						Dir = Dir.Exports)
