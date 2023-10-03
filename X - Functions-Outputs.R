@@ -182,7 +182,7 @@ FUN.Posthoc <- function(SDMPred_ls, # SDM predictions in list where each element
 	PH_resample <- resample(Covariates, SDMPred_ls[[1]]$proportion)
 	
 	SDM_PH_ls <- pblapply(names(SDMPred_ls), FUN = function(Species_name){
-		PH_iter <- Species_name
+		PH_iter <- SDMPred_ls[[Species_name]]
 		proportion_SDM <- PH_iter$proportion
 		binprop_SDM <- proportion_SDM >= CutOff # arbitrary CutOff proposed by Desalegn
 		plot_df <- data.frame(Prediction = rep(values(binprop_SDM), nlayers(PH_resample)),
@@ -198,7 +198,7 @@ FUN.Posthoc <- function(SDMPred_ls, # SDM predictions in list where each element
 		
 		ggsave(
 			filename = file.path(Dir, paste0("TEMPPosthoc_", Species_name, ".pdf")), 
-			plot = marrangeGrob(return_g, nrow=1, ncol=1), 
+			plot = return_g, 
 			width = 15, height = 12
 		)
 		
@@ -210,7 +210,7 @@ FUN.Posthoc <- function(SDMPred_ls, # SDM predictions in list where each element
 		filename = 
 			file.path(Dir, paste0(
 				unique(unlist(lapply(strsplit(names(SDMPred_ls), split = " "), "[[", 1))), "Posthoc.pdf")), 
-		plot = marrangeGrob(unlist(SDM_PH_ls, recursive = FALSE), nrow=1, ncol=1), 
+		plot = marrangeGrob(SDM_PH_ls, nrow=1, ncol=1), 
 		width = 15, height = 12
 	)
 	
