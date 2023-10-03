@@ -194,7 +194,7 @@ FUN.Posthoc <- function(SDMPred_ls, # SDM predictions in list where each element
 			# geom_boxplot() + 
 			geom_violin() + 
 			stat_compare_means(aes(group = Prediction), label = "p.format") + 
-			theme_bw()
+			theme_bw() + labs(title = Species_name)
 		
 		ggsave(
 			filename = file.path(Dir, paste0("TEMPPosthoc_", Species_name, ".pdf")), 
