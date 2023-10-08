@@ -150,10 +150,15 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 	
 	Month_seq <- seq(as.Date(paste0(T_Start, "-01-01")), as.Date(paste0(T_End, "-12-31")), by = "month")
 	Month_seq <- strsplit(x = as.character(Month_seq), split = "-")
+	MonthsNeeded <- unlist(lapply(Month_seq, FUN = function(x){
+		paste(x[1:2], collapse = "_")
+	}))
 	
-	### Raw soil moisture level data ----
+### Raw soil moisture level data ----
 	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. These are then summed up and used in the bioclimatic variable computation of KrigR
-	if(length(list.files(Dir, pattern = "volumetric_soil_water_layer_1")) != length(Month_seq)){
+	WaterPresent <- list.files(Dir, pattern = "volumetric_soil_water_layer_1")
+	AlreadyPresent <- length(unique(grep(paste(MonthsNeeded,collapse="|"), WaterPresent, value=TRUE)))
+	if(AlreadyPresent != length(Month_seq)){
 		#### Downloading ####
 		Qsoil1_ras <- download_ERA(
 			Variable = "volumetric_soil_water_layer_1",
