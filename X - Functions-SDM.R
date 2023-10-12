@@ -16,9 +16,19 @@ package_vec <- c(
 	"usdm", # for vifcor
 	"raster", # for spatial object handling
 	"sf", # for spatialfeatures
-	"pbapply" # for parallelised apply functions and estimators
+	"pbapply", # for parallelised apply functions and estimators
+	"remotes" # for non-Cran installations
 )
 sapply(package_vec, install.load.package)
+
+
+### NON-CRAN PACKAGES ----
+if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+	remotes::install_github("babaknaimi/mraster")
+}
+library(mraster)
+
+if("maxent" %nin% unlist(getmethodNames())){sdm::installAll()} # install methods for sdm package
 
 # SDM DATA PREPARATION FUNCTION -------------------------------------------
 FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in sf objects
@@ -30,7 +40,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
-		loadObj(FNAME)
+		return_ls <- loadObj(FNAME)
 		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(return_ls)
 	}
@@ -55,13 +65,13 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		biomod <- exclude(BV_iter, v) # now exclude those with high cor and vif
 		
 		### Pseudoabsences ----
-		#' to generate pseudo-absence points. 1e5 randomly selected points where the model target is absent but other species are present this can be further modified - for example limiting it by minimum convex that encompasses only 90% of the occurrence data 10% of the distant occurrence points won't be considered 
+		#' to generate pseudo-absence points. 1e4 randomly selected points where the model target is absent but other species are present this can be further modified - for example limiting it by minimum convex that encompasses only 90% of the occurrence data 10% of the distant occurrence points won't be considered 
 		#' Absences
 		SpeciesNon_sf <- Species_sf[Species_sf$species != unique(SDMData_iter$species), ] # select non-target species records
 		SpeciesNon_sf <- st_filter(SpeciesNon_sf, buffer_sf) # select only those in buffered area
 		set.seed(42) # setting seed for reproducibly random process
 		Absences_sf <- SpeciesNon_sf[sample(1:nrow(SpeciesNon_sf), 
-																				size = ifelse(nrow(SpeciesNon_sf)>1e5, 1e5, nrow(SpeciesNon_sf))), ] # select absences
+																				size = ifelse(nrow(SpeciesNon_sf)>1e4, 1e4, nrow(SpeciesNon_sf))), ] # select absences
 		Absences_sf$PRESENCE <- 0 # assign absence	
 		#' Presences
 		Presences_sf <- SDMData_iter
@@ -107,23 +117,24 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 	
 	FNAME <- file.path(Dir, paste0(strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], "_SDM.RData"))
 	Dir.Temp <- file.path(Dir, paste("TEMP", strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], sep = "_"))
+	if(!dir.exists(Dir.Temp)){dir.create(Dir.Temp)}
 	
 	if(file.exists(FNAME) & !Force){
-		loadObj(FNAME)
+		SDMModel_ls <- loadObj(FNAME)
 		warning("Models have already been executed with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(SDMModel_ls)
 	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, FUN = function(SDMModel_Iter){
-		PA_df <- SDMModel_iter$PA
+		PA_df <- SDMModel_Iter$PA
 		species_iden <- unique(PA_df$species[PA_df$PRESENCE == 1])
 		FNAMEInner <- file.path(Dir.Temp, paste0("SDM_", species_iden,".RData"))
 		print(species_iden)
 		
 		if(file.exists(FNAMEInner)){
-			loadObj(FNAMEInner)
+			return_ls <- loadObj(FNAMEInner)
 		}else{
-			SDMModel_Iter <- SDMData_ls[[1]]
+			#SDMModel_Iter <- SDMData_ls[[1]]
 			data_SDM <- SDMModel_Iter$SDMData
 			PA_df <- SDMModel_Iter$PA
 			if(sum(PA_df$PRESENCE) < 41){
@@ -156,7 +167,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 FUN.PredSDM <- function(SDMModel_ls, BV_ras, Dir, Force = FALSE){
 	FNAME <- file.path(Dir, paste0(strsplit(names(SDMModel_ls)[1], split = " ")[[1]][1], "_PRED.RData"))
 	if(file.exists(FNAME)){
-		loadObj(FNAME)
+		SDMPred_ls <- loadObj(FNAME)
 		warning("Predictions have already been made for this Genus previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(SDMPred_ls)
 	}
@@ -174,7 +185,7 @@ FUN.PredSDM <- function(SDMModel_ls, BV_ras, Dir, Force = FALSE){
 		FNAMEInner <- file.path(Dir.Genus, paste0(Species_iter))
 		SDMPred_iter <- SDMModel_ls[[Species_iter]]
 		if(file.exists(paste0(FNAMEInner, ".RData"))){
-			loadObj(paste0(FNAMEInner, ".RData"))
+			Inner_ls <- loadObj(paste0(FNAMEInner, ".RData"))
 		}else{
 			prediction_SDM <- predict(SDMPred_iter$model, BV_ras, 
 																filename = FNAMEInner, overwrite = TRUE)

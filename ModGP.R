@@ -33,6 +33,7 @@ install.load.package <- function(x) {
 	require(x, character.only = TRUE)
 }
 package_vec <- c(
+	"iterators" # for icount
 )
 sapply(package_vec, install.load.package)
 
@@ -89,8 +90,6 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, BV_ras = BV_ras,
 															 Dir = Dir.Data, Force = FALSE)
 
 # ANALYSIS ================================================================
-if("maxent" %nin% unlist(getmethodNames())){sdm::installAll()} # install methods for sdm package
-
 ## SDM Execution ----------------------------------------------------------
 SDMModel_ls <- FUN.ExecSDM(SDMData_ls = SDMInput_ls, BV_ras = BV_ras, 
 													 Dir = Dir.Exports, Force = FALSE)
