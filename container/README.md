@@ -4,11 +4,11 @@
 
 ### Pulling the image
 
-Pull the pre-built image (choose the desired `<version>`):
+Pull the pre-built image (replace `VERSION` with the desired version number):
 
-    singularity pull --docker-login docker://ghcr.io/biodt/cwr:<version>
+    singularity pull --docker-login docker://ghcr.io/biodt/cwr:VERSION
 
-This creates singularity image file `cwr_<version>.sif`.
+This creates singularity image file `cwr_VERSION.sif`.
 
 Note that the image is for now private, which means that login is required.
 Follow [these instructions](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token#creating-a-personal-access-token-classic)
