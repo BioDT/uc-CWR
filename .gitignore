@@ -58,3 +58,9 @@ Logo/*
 
 # API credential
 X - PersonalSettings.R
+
+# Singularity images
+*.sif
+
+# Job output files
+*.out
