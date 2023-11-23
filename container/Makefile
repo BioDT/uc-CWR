@@ -6,7 +6,7 @@ R_VERSION=4.3.2
 
 build: Dockerfile
 	docker build \
-		--label "org.opencontainers.image.source=https://github.com/BioDT/uc-cwr" \
+		--label "org.opencontainers.image.source=https://github.com/BioDT/uc-CWR" \
 		--label "org.opencontainers.image.description=CWR environment with R $(R_VERSION)" \
 		--build-arg R_VERSION=$(R_VERSION) \
 		-t $(IMAGE_ROOT)/$(IMAGE):$(IMAGE_VERSION) \
