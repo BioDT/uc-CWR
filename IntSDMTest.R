@@ -3,8 +3,13 @@ rm(list =ls())
 library(intSDM)
 library(giscoR)
 
+source_lines <- function(file, lines){
+	source(textConnection(readLines(file)[lines]))
+}
+source_lines("ModGP.R", 1:90)
+
 # PRESENCE/ABSENCE -------
-load('Philip.RData')
+Occ_df <- SDMInput_ls$`Lathyrus vernus`$PA
 spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
 Occ_df$modelSpec <- spec_name
 
@@ -17,7 +22,6 @@ names(cov) <- vars
 # SDM WORKFLOW -------
 
 ## Workflow Setup ----
-
 ### base ----
 workflow <- startWorkflow(
 	Projection = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0',
@@ -42,7 +46,7 @@ workflow$plot(Species = TRUE)
 workflow$addCovariates(Object = cov)
 
 ### mesh ----
-load(file.path("Data", "GlobalAreaCRS.RData"))
+load("GlobalAreaCRS.RData")
 workflow$.__enclos_env__$private$Area <- st_transform(workflow$.__enclos_env__$private$Area, crsto)
 
 workflow$addMesh(cutoff = 20000,
@@ -84,6 +88,7 @@ plot(exp(rasterize(test, cov[[1]], field = "mean")))
 library(raster)
 library(stars)
 library(tidyterra)
+library(cowplot)
 
 ## Model output rasters ----
 preds <- exp(rast((st_rasterize(test %>% dplyr::select(mean, geometry)))))
@@ -92,7 +97,7 @@ preds_filled <- focal(preds, 21, "modal", na.policy="only")
 preds_masked <- mask(preds_filled, cov[[1]])
 
 suitability_ras <- preds_masked 
-binarised_ras <- preds_masked > 0.5
+binarised_ras <- preds_masked > 1
 
 modelled_ras <- c(suitability_ras, binarised_ras)
 names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
@@ -103,29 +108,46 @@ PH_toxicity <- rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/S
 drivers_ras <- c(PH_nutrient, PH_toxicity)
 names(drivers_ras) <- c("Nutrient", "Toxicity")
 
-drivers_ras <- resample(drivers_ras, presence_ras)
+drivers_ras <- resample(drivers_ras, modelled_ras)
 
 ## Model inputs ----
 presences_df <- Occ_df[Occ_df$PRESENCE == 1, ]
-presences_sf <- st_as_sf(presences_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
-
+presences_sf <- st_as_sf(presences_df)
 absences_df <- Occ_df[Occ_df$PRESENCE == 0, ]
-absences_sf <- st_as_sf(absences_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+absences_sf <- st_as_sf(absences_df)
 
-buffer_sf <- st_union(st_buffer(st_as_sf(presences_sf), 15)) # 15 degree buffer around points
+buffer_sf <- st_union(st_buffer(presences_sf["species"], 15)) # 15 degree buffer around points
+st_crs(buffer_sf) <- st_crs(modelled_ras)
 
 ## Plotting ----
+background_ras <- !is.na(modelled_ras[[1]])
+background_ras <- terra::crop(background_ras, st_bbox(buffer_sf)+c(-5, -5, 5, 5))
+Occ_df$PRESENCE[Occ_df$PRESENCE == 0] <- "Absence"
+Occ_df$PRESENCE[Occ_df$PRESENCE == 1] <- "Presence"
 
-ggplot() + 
-	geom_spatraster(
-		data = modelled_ras) + 
-	facet_wrap(~lyr, ncol = 2) 
+IN_gg <- ggplot() + geom_spatraster(data = background_ras) + 
+	scale_fill_manual(values = c("#000a63", "#333333")) + 
+	geom_point(aes(x = lon, y = lat, color = factor(PRESENCE)), data = Occ_df, size = 0.1, pch = 4, alpha = 0.2) +
+	scale_color_manual(values = c("red", "white"), name = "Presence / Absence") + 
+	geom_sf(data = buffer_sf, colour = 'black', size = 0.2, fill = 'green', alpha = .05) + 
+	labs(title = "ModGP Observation Inputs", x = "Longitude [°]", y = "Latitude [°]") + 
+	# theme_bw() +
+	guides(fill = "none")
+	
+SM_gg <- ggplot() + geom_spatraster(data = modelled_ras$Suitability) + 
+	scale_fill_viridis_c(name = "Suitability") + 
+	labs(title = "Modelled Habitat Suitability", x = "Longitude [°]", y = "Latitude [°]") + 
+	theme_bw()
 
-	geom_point(aes(x = lon, y = lat, color = factor(PRESENCE)), data = Occ_df, size = 1, pch = 4) +
-	scale_color_manual(values = c("black", "white")) +
-	geom_polygon(aes(x = long, y = lat, group = id), data = fortify(as_Spatial(buffer_sf)),
-							 colour = 'black', size = 0.2, fill = 'black', alpha = .1)
+BN_gg <- ggplot() + geom_spatraster(data = modelled_ras$`Predicted Presence/Absence`) + 
+	scale_fill_viridis_d(name = "Presence/Absence") + 
+	labs(title = "Modelled Species Presence", x = "Longitude [°]", y = "Latitude [°]") + 
+	theme_bw()
 
+cowplot::plot_grid(IN_gg,
+									 cowplot::plot_grid(SM_gg, BN_gg, ncol = 2),
+									 ncol = 1
+)
 	
 save(Occ_df, presences_sf, absences_sf, buffer_sf,
-		 modelled_ras, drivers_ras)
+		 modelled_ras, drivers_ras, file = "Tomasz.RData")
