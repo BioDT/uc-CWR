@@ -150,4 +150,4 @@ cowplot::plot_grid(IN_gg,
 )
 	
 save(Occ_df, presences_sf, absences_sf, buffer_sf,
-		 modelled_ras, drivers_ras, file = "Tomasz.RData")
+		 modelled_ras, drivers_ras, file = "Tomas.RData")
