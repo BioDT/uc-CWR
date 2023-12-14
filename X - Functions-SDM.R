@@ -48,15 +48,14 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	Species_sf <- do.call(rbind, Species_ls$occs)
 	return_ls <- pblapply(occ_ls, FUN = function(SDMData_iter){
 		# SDMData_iter <- occ_ls[[1]]
+		Presences_sf <- SDMData_iter["species"]
+		
+		### Initial Environmental NA match Removal ----
+		NAcheck <- raster::extract(BV_ras, st_coordinates(Presences_sf), df = TRUE)
+		Presences_sf <- Presences_sf[!is.na(rowSums(NAcheck)), ]
 		
 		### Training Region Limiting ----
-		Presences_sf <- SDMData_iter["species"]
-		# print(unique(SDMData_iter["species"]$species))
 		buffer_sf <- st_union(st_buffer(Presences_sf, 15)) # 15 degree buffer around points
-		
-		# plot(crop(Land_sp, extent(Presences_sf)+c(-30,30,-30, 30)))
-		# plot(st_union(buffer_sf), col = "red", add = TRUE)
-		# plot(Presences_sf, add = TRUE, col = "green", cex = 0.5, pch = 4)
 		
 		### Environmental Data Colinearity ----
 		BV_iter <- crop(BV_ras, extent(st_bbox(buffer_sf)))
