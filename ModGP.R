@@ -68,6 +68,7 @@ source("X - Functions-Outputs.R")
 
 # DATA ====================================================================
 ## GBIF Data --------------------------------------------------------------
+message("Retrieving GBIF data")
 ## species of interest
 Species_ls <- FUN.DownGBIF(
 	species = "Lathyrus sativus",
@@ -75,10 +76,12 @@ Species_ls <- FUN.DownGBIF(
 	Force = FALSE)
 
 ## Environmental Data -----------------------------------------------------
+message("Retrieving environmental data")
 BV_ras <- FUN.DownBV(T_Start = 1985, T_End = 2015, 
 										 Dir = Dir.Data.Envir, Force = FALSE)
 
 ## Posthoc Data -----------------------------------------------------------
+message("Retrieving additional covariates")
 #' For relating SDM outputs to other characteristics of interest to users
 PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
 PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
@@ -86,23 +89,25 @@ PH_stack <- stack(PH_nutrient, PH_toxicity)
 names(PH_stack) <- c("Nutrient", "Toxicity")
 
 ## SDM Data Preparations --------------------------------------------------
+message("Preparing data for SDM workflow")
 SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, BV_ras = BV_ras, 
 															 Dir = Dir.Data, Force = FALSE)
 
 # ANALYSIS ================================================================
 ## SDM Execution ----------------------------------------------------------
+message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(SDMData_ls = SDMInput_ls, BV_ras = BV_ras, 
 													 Dir = Dir.Exports, Force = FALSE)
 
-## SDM Prediction ---------------------------------------------------------
-SDMPred_ls <- FUN.PredSDM(SDMModel_ls = SDMModel_ls, BV_ras = BV_ras,
-											 Dir = Dir.Exports, Force = FALSE)
-
-# OUTPUTS =================================================================
-## Plotting ---------------------------------------------------------------
-SDM_viz <- FUN.Viz(SDMModel_ls = SDMModel_ls, SDMInput_ls = SDMInput_ls, BV_ras = BV_ras,
-				Dir = Dir.Exports)
-
-## Posthoc ----------------------------------------------------------------
-Posthoc_viz <- FUN.Posthoc(SDMModel_ls = SDMModel_ls, Covariates = PH_stack, CutOff = 0.6,
-						Dir = Dir.Exports)
+# ## SDM Prediction ---------------------------------------------------------
+# SDMPred_ls <- FUN.PredSDM(SDMModel_ls = SDMModel_ls, BV_ras = BV_ras,
+# 											 Dir = Dir.Exports, Force = FALSE)
+# 
+# # OUTPUTS =================================================================
+# ## Plotting ---------------------------------------------------------------
+# SDM_viz <- FUN.Viz(SDMModel_ls = SDMModel_ls, SDMInput_ls = SDMInput_ls, BV_ras = BV_ras,
+# 				Dir = Dir.Exports)
+# 
+# ## Posthoc ----------------------------------------------------------------
+# Posthoc_viz <- FUN.Posthoc(SDMModel_ls = SDMModel_ls, Covariates = PH_stack, CutOff = 0.6,
+# 						Dir = Dir.Exports)
