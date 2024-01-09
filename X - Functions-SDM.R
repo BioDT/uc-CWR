@@ -4,38 +4,17 @@
 #'  - SDM Functionality
 #'  	- Data Preparation
 #'  	- Model Execution
-#'  	- Model Prediction and Desired Summaries
 #'  DEPENDENCIES:
 #'  - None
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
-
-# PACKAGES -----------------------------------------------------------------
-package_vec <- c(
-	"sdm", # for sdm functionality
-	"usdm", # for vifcor
-	"raster", # for spatial object handling
-	"sf", # for spatialfeatures
-	"pbapply", # for parallelised apply functions and estimators
-	"remotes" # for non-Cran installations
-)
-sapply(package_vec, install.load.package)
-
-
-### NON-CRAN PACKAGES ----
-if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	remotes::install_github("babaknaimi/mraster")
-}
-library(mraster)
-
-if("maxent" %nin% unlist(getmethodNames())){sdm::installAll()} # install methods for sdm package
 
 # SDM DATA PREPARATION FUNCTION -------------------------------------------
 FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in sf objects
 														BV_ras = NULL, # stack of environmental variables
 														Dir = NULL, # where to save output
 														Force = FALSE # whether to force re-running
-														){
+){
 	
 	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], "_SDMData.RData"))
 	
@@ -89,19 +68,8 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		lat <- PA_df$lat <- st_coordinates(PA_sf)[,2]
 		PA_df <- na.omit(PA_df)
 		
-		### Creating SDM Input Object ----
-		if(nrow(PA_df) == 0){
-			data_SDM <- NA
-		}else{
-			data_SDM <- sdmData(PRESENCE~.+coords(lon+lat), 
-													train = PA_df[
-														, c("lon","lat","PRESENCE", colnames(Predictors))
-													])  
-		}
-		
 		### Returning to outside of apply ----
-		list(PA = PA_df,
-				 SDMData = data_SDM)
+		list(PA = PA_df)
 	})	
 	saveObj(return_ls, file = FNAME)
 	return_ls
@@ -109,101 +77,133 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 
 # SDM EXECUTION FUNCTION ---------------------------------------------------
 FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in sf objects
-														BV_ras = NULL, # stack of environmental variables
-														Dir = NULL, # where to save output
-														Force = FALSE # whether to force re-running
+												BV_ras = NULL, # stack of environmental variables
+												Dir = NULL, # where to save output
+												Force = FALSE, # whether to force re-running
+												KeepModels = TRUE # whether to retain the ISDM model objects
 ){
-	
-	FNAME <- file.path(Dir, paste0(strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], "_SDM.RData"))
-	Dir.Temp <- file.path(Dir, paste("TEMP", strsplit(names(SDMData_ls)[1], split = " ")[[1]][1], sep = "_"))
-	if(!dir.exists(Dir.Temp)){dir.create(Dir.Temp)}
+	setwd(Dir)
+	GenName <- strsplit(names(SDMData_ls)[1], split = " ")[[1]][1]
+	FNAME <- file.path(Dir, paste0(GenName, "_SDMData.RData"))
+	projName <- paste0("ISDM-", GenName)
 	
 	if(file.exists(FNAME) & !Force){
-		SDMModel_ls <- loadObj(FNAME)
-		warning("Models have already been executed with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-		return(SDMModel_ls)
+		return_ls <- loadObj(FNAME)
+		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		return(return_ls)
 	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, FUN = function(SDMModel_Iter){
-		PA_df <- SDMModel_Iter$PA
-		species_iden <- unique(PA_df$species[PA_df$PRESENCE == 1])
-		FNAMEInner <- file.path(Dir.Temp, paste0("SDM_", species_iden,".RData"))
-		print(species_iden)
 		
-		if(file.exists(FNAMEInner)){
-			return_ls <- loadObj(FNAMEInner)
+		# PRESENCE/ABSENCE -------
+		Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
+		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
+		Occ_df$modelSpec <- spec_name
+		Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+		
+		# COVARIATES -------
+		cov <- rast(BV_ras)
+		vars <- colnames(Occ_df)[startsWith(colnames(Occ_df), prefix = "BIO")]
+		cov <- cov[[as.numeric(gsub(".*?([0-9]+).*", "\\1", vars))]]
+		names(cov) <- vars
+		
+		Occ_sf <- st_transform(Occ_sf, crs = st_crs(cov))
+		
+		if(file.exists(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds")) &
+			 !Force){
+			message(paste("ISDM already compiled for ", spec_name, "with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"))
 		}else{
-			#SDMModel_Iter <- SDMData_ls[[1]]
-			data_SDM <- SDMModel_Iter$SDMData
-			PA_df <- SDMModel_Iter$PA
-			if(sum(PA_df$PRESENCE) < 41){
-				model_SDM <- NA
-				ensemble_SDM <- NA
-				eval_SDM <- NA
-			}else{
-				model_SDM <- sdm(~., data_SDM, methods = c ("maxent","gbm","GAM","RF"), 
-												 replications = c("sub", "boot"), test.p = 25, n = 3,
-												 parallelSetting = list(ncore = 4, method = "parallel"))
-				ensemble_SDM <- ensemble(model_SDM, BV_ras, filename = "enpr.img", 
-																 setting = list(method = "weighted", 
-																 							 stat = "tss", opt = 2), 
-																 overwrite = TRUE)
-				eval_SDM <- getEvaluation(model_SDM, stat = c("TSS", "threshold"))
-			}
-			return_ls <- list(model = model_SDM,
-												ensemble_SDM = ensemble_SDM,
-												evalalutation = eval_SDM)
-			saveObj(return_ls, file = FNAMEInner)
+			message(paste("Compiling ISDM for", spec_name))
+			
+			# SDM WORKFLOW -------
+			## Workflow Setup ----
+			### base ----
+			workflow <- startWorkflow(
+				Projection = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0',
+				Species = unique(Occ_df$modelSpec),
+				saveOptions = list(projectName =  projName), Save = TRUE, Quiet = TRUE
+			)
+			
+			### area ----
+			Globe_sf <- gisco_get_countries()
+			workflow$addArea(Object = Globe_sf)
+			
+			### presence/absence ----
+			workflow$addStructured(dataStructured = Occ_sf, datasetType = 'PA',
+														 responseName = 'PRESENCE',
+														 speciesName = 'modelSpec',
+														 coordinateNames = c('lon', 'lat'))
+			# workflow$plot(Species = TRUE)
+			
+			### covariates ----
+			workflow$addCovariates(Object = cov)
+			
+			### mesh ----
+			load(file.path(Dir.Data, "GlobalAreaCRS.RData"))
+			workflow$.__enclos_env__$private$Area <- st_transform(workflow$.__enclos_env__$private$Area, crsto)
+			workflow$addMesh(cutoff = 20000,
+											 max.edge = c(60000, 80000),
+											 offset= 100000)
+			
+			### priors ----
+			workflow$specifySpatial(prior.range = c(300000, 0.05),
+															prior.sigma = c(50, 0.2))
+			
+			### cross-validation ----
+			workflow$crossValidation(Method = 'Loo')
+			
+			### outputs ----
+			workflow$workflowOutput(c("Model", "Predictions"))
+			
+			### INLA options ----
+			workflow$modelOptions(INLA = list(control.inla=list(int.strategy = 'eb',
+																													cmin = 0),
+																				safe = TRUE,
+																				inla.mode = 'experimental'))
+			
+			## Execution ----
+			Model_iSDM <- sdmWorkflow(workflow)
 		}
-		return_ls
+		
+		## Output ----
+		### reading back in ----
+		Predictions <- readRDS(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds"))
+		intModel <- readRDS(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "intModel.rds"))
+		
+		### output rasters ----
+		#### predicted suitability ----
+		##!!!! the following block is temporary until I figure out how to properly predict intSDMs to covariate resolution
+		preds <- exp(rast(st_rasterize(Predictions$predictions %>% dplyr::select(mean, geometry))))
+		preds <- resample(preds, cov[[1]])
+		preds_filled <- focal(preds, 21, "modal", na.policy="only")
+		preds_masked <- mask(preds_filled, cov[[1]])
+		suitability_ras <- preds_masked
+		
+		#### binarising suitability
+		Occ_ras <- rasterize(Occ_sf, cov, field = "PRESENCE")
+		RemoveNA <- data.frame(Suit = values(suitability_ras), 
+													 Knowns = values(Occ_ras))
+		colnames(RemoveNA) <- c("Suitability", "Observation")
+		RemoveNA <- na.omit(RemoveNA)
+		
+		png(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "ROC.png"), width = 16, height = 16, units = "cm", res = 100)
+		ROC <- Epi::ROC(test = RemoveNA$Suitability, stat = RemoveNA$Observation)
+		dev.off()
+		
+		# sensitivity value at maximizing cutoff point (sensitivity + specifcity = MAX)
+		Bin_thresh <- which.max(rowSums(ROC$res[, c("sens", "spec")]))
+		binarised_ras <- preds_masked > as.numeric(names(Bin_thresh))
+		
+		#### combining model output rasters ----
+		modelled_ras <- c(suitability_ras, binarised_ras)
+		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
+		
+		# REPORTING BACK TO LIST ----
+		list(Outputs = modelled_ras,
+				 ISDM = intModel)
 	})
 	saveObj(SDMModel_ls, file = FNAME)
-	unlink(Dir.Temp, recursive = TRUE)
+	if(!KeepModels){unlink(file.path(Dir, projName), recursive = TRUE)}
+	setwd(Dir.Base)
 	SDMModel_ls
-}
-
-# SDM PREDICTION FUNCTION --------------------------------------------------
-FUN.PredSDM <- function(SDMModel_ls, BV_ras, Dir, Force = FALSE){
-	FNAME <- file.path(Dir, paste0(strsplit(names(SDMModel_ls)[1], split = " ")[[1]][1], "_PRED.RData"))
-	if(file.exists(FNAME)){
-		SDMPred_ls <- loadObj(FNAME)
-		warning("Predictions have already been made for this Genus previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-		return(SDMPred_ls)
-	}
-	
-	Dir.Genus <- file.path(Dir, paste0(strsplit(names(SDMModel_ls)[1], split = " ")[[1]][1], "_predictions"))
-	if(!dir.exists(Dir.Genus)){dir.create(Dir.Genus)}
-	
-	## removing non-executable model species
-	NonNAs <- unlist(lapply(SDMModel_ls, FUN = function(x){!is.na(x$model)}))
-	SDMModel_ls <- SDMModel_ls[NonNAs]
-	
-	## prediction and binarisation
-	SDMPred_ls <- pblapply(names(SDMModel_ls), FUN = function(Species_iter){
-		print(Species_iter)
-		FNAMEInner <- file.path(Dir.Genus, paste0(Species_iter))
-		SDMPred_iter <- SDMModel_ls[[Species_iter]]
-		if(file.exists(paste0(FNAMEInner, ".RData"))){
-			Inner_ls <- loadObj(paste0(FNAMEInner, ".RData"))
-		}else{
-			prediction_SDM <- predict(SDMPred_iter$model, BV_ras, 
-																filename = FNAMEInner, overwrite = TRUE)
-			# this block is needed to load fully into memory
-			modelnames <- names(prediction_SDM) # keep names
-			prediction_SDM <- stack(FNAMEInner) # index on drive
-			prediction_SDM <- readAll(prediction_SDM) # load fully from file
-			names(prediction_SDM) <- modelnames # assign names back on
-			binarised_SDM <- prediction_SDM > SDMPred_iter$evalalutation$threshold # is this correct?!
-			proportion_SDM <- sum(binarised_SDM)/nlayers(binarised_SDM)
-			Inner_ls <- list(prediction = prediction_SDM,
-											 binarised = binarised_SDM,
-											 proportion = proportion_SDM)
-			saveObj(Inner_ls, paste0(FNAMEInner, ".RData"))
-		}
-		Inner_ls
-	})
-	names(SDMPred_ls) <- names(SDMModel_ls)
-	saveObj(SDMPred_ls, file = FNAME)
-	unlink(Dir.Genus, recursive = TRUE)
-	SDMPred_ls
 }

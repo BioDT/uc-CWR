@@ -9,11 +9,63 @@
 #' ####################################################################### #
 
 # PREAMBLE ================================================================
-rm(list=ls()) # clearing the work environment
 set.seed(42) # making things reproducibly random
 
+## Packages ---------------------------------------------------------------
+install.load.package <- function(x) {
+	if (!require(x, character.only = TRUE))
+		install.packages(x, repos='http://cran.us.r-project.org')
+	require(x, character.only = TRUE)
+}
+### CRAN PACKAGES ----
+package_vec <- c(
+	"iterators", # for icount
+	"terra", # for alternative raster handling
+	"rgbif", # for gbif access
+	"sf", # for spatialfeatures
+	"sp", # for spatialpoints and polygons
+	"rnaturalearth", # for landmask
+	"parallel", # for parallel runs
+	"pbapply", # for parallelised apply functions and estimators
+	"usdm", # for vifcor
+	"raster", # for spatial object handling
+	"sf", # for spatialfeatures
+	"pbapply", # for parallelised apply functions and estimators
+	"intSDM", # for intSDMs
+	"giscoR", # for shapefiles of Earth
+	"Epi", # for ROC statistic
+	"raster", # for raster objects
+	"stars" # for fast raster operations
+)
+sapply(package_vec, install.load.package)
+
+### NON-CRAN PACKAGES ----
+if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
+	devtools::install_github("ErikKusch/KrigR")
+}
+library(KrigR)
+
+## API Credentials --------------------------------------------------------
+try(source("X - PersonalSettings.R")) 
+if(as.character(options("gbif_user")) == "NULL" ){
+	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
+if(as.character(options("gbif_email")) == "NULL" ){
+	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
+if(as.character(options("gbif_pwd")) == "NULL" ){
+	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
+
+if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
+	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
+	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
+} # end of CDS API check
+# NUMBER OF CORES
+if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
+	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
+} # end of Core check
+
 ## Directories ------------------------------------------------------------
-### Define dicrectories in relation to project directory
+### Define directories in relation to project directory
 Dir.Base <- getwd()
 Dir.Data <- file.path(Dir.Base, "Data")
 Dir.Exports <- file.path(Dir.Base, "Exports")
@@ -96,13 +148,10 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, BV_ras = BV_ras,
 # ANALYSIS ================================================================
 ## SDM Execution ----------------------------------------------------------
 message("Executing SDM workflows")
-SDMModel_ls <- FUN.ExecSDM(SDMData_ls = SDMInput_ls, BV_ras = BV_ras, 
-													 Dir = Dir.Exports, Force = FALSE)
+SDMModel_ls <- FUN.ExecSDM(
+	SDMData_ls = SDMInput_ls[which(sapply(Species_ls$occs, nrow) > 40)], 
+	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE)
 
-# ## SDM Prediction ---------------------------------------------------------
-# SDMPred_ls <- FUN.PredSDM(SDMModel_ls = SDMModel_ls, BV_ras = BV_ras,
-# 											 Dir = Dir.Exports, Force = FALSE)
-# 
 # # OUTPUTS =================================================================
 # ## Plotting ---------------------------------------------------------------
 # SDM_viz <- FUN.Viz(SDMModel_ls = SDMModel_ls, SDMInput_ls = SDMInput_ls, BV_ras = BV_ras,

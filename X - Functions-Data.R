@@ -8,43 +8,6 @@
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
 
-# PACKAGES -----------------------------------------------------------------
-package_vec <- c(
-	"terra", # for alternative raster handling
-	"rgbif", # for gbif access
-	"sf", # for spatialfeatures
-	"sp", # for spatialpoints and polygons
-	"rnaturalearth", # for landmask
-	"parallel", # for parallel runs
-	"pbapply" # for parallelised apply functions and estimators
-)
-sapply(package_vec, install.load.package)
-
-### NON-CRAN PACKAGES ----
-if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
-	devtools::install_github("ErikKusch/KrigR")
-}
-library(KrigR)
-
-# REGISTER API CREDENTIALS -------------------------------------------------
-try(source("X - PersonalSettings.R")) 
-if(as.character(options("gbif_user")) == "NULL" ){
-	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
-if(as.character(options("gbif_email")) == "NULL" ){
-	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
-if(as.character(options("gbif_pwd")) == "NULL" ){
-	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
-
-if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
-	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
-	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
-} # end of CDS API check
-# NUMBER OF CORES
-if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
-} # end of Core check
-
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
 # queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object
 FUN.DownGBIF <- function(species = NULL, # species name as character for whose genus data is to be downloaded

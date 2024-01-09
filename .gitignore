@@ -50,6 +50,7 @@ rsconnect/
 
 # Folders with Data
 Data/*
+!Data/GlobalAreaCRS.RData
 Exports/*
 Logo/*
 
