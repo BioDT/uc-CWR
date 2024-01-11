@@ -66,7 +66,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		PA_df <- as.data.frame(PA_sf)
 		lon <- PA_df$lon <- st_coordinates(PA_sf)[,1]
 		lat <- PA_df$lat <- st_coordinates(PA_sf)[,2]
-		PA_df <- na.omit(PA_df)
+		# PA_df <- na.omit(PA_df)
 		
 		### Returning to outside of apply ----
 		list(PA = PA_df)
@@ -150,10 +150,13 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 															prior.sigma = c(50, 0.2))
 			
 			### cross-validation ----
-			workflow$crossValidation(Method = 'Loo')
+			# workflow$crossValidation(Method = 'Loo')
 			
 			### outputs ----
 			workflow$workflowOutput(c("Model", "Predictions"))
+			
+			### prediction data ----
+			pred_spsf <- as(stack(cov), "SpatialPixelsDataFrame")
 			
 			### INLA options ----
 			workflow$modelOptions(INLA = list(control.inla=list(int.strategy = 'eb',
@@ -162,7 +165,10 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 																				inla.mode = 'experimental'))
 			
 			## Execution ----
-			Model_iSDM <- sdmWorkflow(workflow)
+			Model_iSDM <- sdmWorkflow(workflow,
+																predictionDim = c(pred_spsf@grid@cells.dim[1],
+																									pred_spsf@grid@cells.dim[2]),
+																predictionData = pred_spsf)
 		}
 		
 		## Output ----
@@ -172,12 +178,15 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		
 		### output rasters ----
 		#### predicted suitability ----
-		##!!!! the following block is temporary until I figure out how to properly predict intSDMs to covariate resolution
-		preds <- exp(rast(st_rasterize(Predictions$predictions %>% dplyr::select(mean, geometry))))
-		preds <- resample(preds, cov[[1]])
-		preds_filled <- focal(preds, 21, "modal", na.policy="only")
-		preds_masked <- mask(preds_filled, cov[[1]])
-		suitability_ras <- preds_masked
+		preds <- cbind(
+			Predictions$predictions@coords,
+			Predictions$predictions$mean
+		)
+		colnames(preds) <- c("x", "y", "z")
+		preds <- rasterFromXYZ(as.data.frame(preds)[, c("x", "y", "z")])
+		preds <- rast(preds)
+		preds <- exp(preds) # this can produce serious outliers
+		suitability_ras <- preds
 		
 		#### binarising suitability
 		Occ_ras <- rasterize(Occ_sf, cov, field = "PRESENCE")
@@ -192,7 +201,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		
 		# sensitivity value at maximizing cutoff point (sensitivity + specifcity = MAX)
 		Bin_thresh <- which.max(rowSums(ROC$res[, c("sens", "spec")]))
-		binarised_ras <- preds_masked > as.numeric(names(Bin_thresh))
+		binarised_ras <- suitability_ras > as.numeric(names(Bin_thresh))
 		
 		#### combining model output rasters ----
 		modelled_ras <- c(suitability_ras, binarised_ras)
