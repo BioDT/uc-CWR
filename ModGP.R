@@ -31,7 +31,8 @@ package_vec <- c(
 	"raster", # for spatial object handling
 	"sf", # for spatialfeatures
 	"pbapply", # for parallelised apply functions and estimators
-	"intSDM", # for intSDMs
+	"devtools", # for non-CRAN installation
+	# "intSDM", # for intSDMs
 	"giscoR", # for shapefiles of Earth
 	"Epi", # for ROC statistic
 	"raster", # for raster objects
@@ -45,6 +46,12 @@ if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 	devtools::install_github("ErikKusch/KrigR")
 }
 library(KrigR)
+
+if("intSDM" %in% rownames(installed.packages()) == FALSE){
+	devtools::install_github("PhilipMostert/PointedSDMs")
+	devtools::install_github("PhilipMostert/intSDM")
+}
+library(intSDM)
 
 ## API Credentials --------------------------------------------------------
 try(source("X - PersonalSettings.R")) 
@@ -146,10 +153,34 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, BV_ras = BV_ras,
 															 Dir = Dir.Data, Force = FALSE)
 
 # ANALYSIS ================================================================
+## SDM Pre-Selection ------------------------------------------------------
+message("SDM species pre-selection")
+cov <- rast(BV_ras)[[1]]
+Globe_sf <- gisco_get_countries()
+
+useableocc_vec <- unlist(
+	pbsapply(SDMInput_ls, function(SDMModel_Iter){
+		## make sf object
+		Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
+		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
+		Occ_df$modelSpec <- spec_name
+		# print(spec_name)
+		## assign correct crs
+		Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+		Occ_sf <- st_transform(Occ_sf, crs = st_crs(cov))
+		## filter by land area of polygon
+		Occ_sf <- st_filter(Occ_sf, Globe_sf)
+		## filter additionally by covariate data
+		valsext <- terra::extract(y = Occ_sf[Occ_sf$PRESENCE == 1, ], x = cov)
+		useableocc <- sum(!is.na(valsext$BIO1))
+		useableocc
+		})
+)
+
 ## SDM Execution ----------------------------------------------------------
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
-	SDMData_ls = SDMInput_ls[which(sapply(Species_ls$occs, nrow) > 40)], 
+	SDMData_ls = SDMInput_ls[as.numeric(which(useableocc_vec > 39))], 
 	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE)
 
 # # OUTPUTS =================================================================
