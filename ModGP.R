@@ -84,18 +84,6 @@ CreateDir <- sapply(Dirs, function(x){
 	x <- eval(parse(text=x))
 	if(!dir.exists(x)) dir.create(x)})
 
-## Packages ---------------------------------------------------------------
-### CRAN PACKAGES ----
-install.load.package <- function(x) {
-	if (!require(x, character.only = TRUE))
-		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
-}
-package_vec <- c(
-	"iterators" # for icount
-)
-sapply(package_vec, install.load.package)
-
 ## Functionality ----------------------------------------------------------
 `%nin%` <- Negate(`%in%`) # a function for negation of %in% function
 
