@@ -206,7 +206,10 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		#### combining model output rasters ----
 		modelled_ras <- c(suitability_ras, binarised_ras)
 		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
-		
+		writeCDF(modelled_ras, 
+						 file.path(getwd(), paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc"))
+						 )
+				 
 		# REPORTING BACK TO LIST ----
 		list(Outputs = modelled_ras,
 				 ISDM = intModel)
