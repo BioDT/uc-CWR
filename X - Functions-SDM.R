@@ -185,8 +185,9 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		colnames(preds) <- c("x", "y", "z")
 		preds <- rasterFromXYZ(as.data.frame(preds)[, c("x", "y", "z")])
 		preds <- rast(preds)
-		preds <- exp(preds) # this can produce serious outliers
-		suitability_ras <- preds
+		suitability_ras <- # exp(
+			preds
+			#) # exp() can produce serious outliers
 		
 		#### binarising suitability
 		Occ_ras <- rasterize(Occ_sf, cov, field = "PRESENCE")
@@ -207,7 +208,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		modelled_ras <- c(suitability_ras, binarised_ras)
 		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
 		writeCDF(modelled_ras, 
-						 file.path(getwd(), paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc"))
+						 file.path(getwd(), paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
+						 overwrite = TRUE
 						 )
 				 
 		# REPORTING BACK TO LIST ----
