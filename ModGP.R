@@ -146,8 +146,7 @@ message("SDM species pre-selection")
 cov <- rast(BV_ras)[[1]]
 Globe_sf <- gisco_get_countries()
 
-useableocc_vec <- unlist(
-	pbsapply(SDMInput_ls, function(SDMModel_Iter){
+useablespec_ls <- pblapply(SDMInput_ls, function(SDMModel_Iter){
 		## make sf object
 		Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
 		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
@@ -161,14 +160,17 @@ useableocc_vec <- unlist(
 		## filter additionally by covariate data
 		valsext <- terra::extract(y = Occ_sf[Occ_sf$PRESENCE == 1, ], x = cov)
 		useableocc <- sum(!is.na(valsext$BIO1))
-		useableocc
+		## identify unique cells filled by occurrences
+		uniquecells <- sum(values(rasterize(Occ_sf, cov, field = "PRESENCE"))[,1] == 1, na.rm = TRUE)
+		## report back
+		data.frame(locs = useableocc, cells = uniquecells)
 		})
-)
+useablespec_df <- do.call(rbind, useablespec_ls)
 
 ## SDM Execution ----------------------------------------------------------
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
-	SDMData_ls = SDMInput_ls[as.numeric(which(useableocc_vec > 39))], 
+	SDMData_ls = SDMInput_ls[which(useablespec_df$locs > 40 & useablespec_df$cells > 40)], 
 	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE)
 
 # # OUTPUTS =================================================================
