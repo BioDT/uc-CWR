@@ -191,7 +191,7 @@ FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
 		)
 		return_ls
 	})
-	names(Plots_ls) <- names(SDMPred_ls)
+	names(Plots_ls) <- names(SDM_outs)
 
 	ggsave(
 		filename = 
