@@ -185,5 +185,5 @@ SDM_outs <- FUN.ShinyPrep(SDMModel_ls = SDMModel_ls,
 ## Plotting ---------------------------------------------------------------
 SDM_viz <- FUN.Viz(SDM_outs = SDM_outs,
 									 BV_ras = BV_ras,
-									 Covariates = PH_stack, 
+									 Covariates = PH_stack,
 									 Dir = Dir.Exports)

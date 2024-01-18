@@ -88,9 +88,9 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 	projName <- paste0("ISDM-", GenName)
 	
 	if(file.exists(FNAME) & !Force){
-		return_ls <- loadObj(FNAME)
+		SDMModel_ls <- loadObj(FNAME)
 		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-		return(return_ls)
+		return(SDMModel_ls)
 	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, FUN = function(SDMModel_Iter){
@@ -99,6 +99,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
 		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
 		Occ_df$modelSpec <- spec_name
+		print(spec_name)
 		Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
 		
 		# COVARIATES -------
@@ -207,10 +208,11 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		#### combining model output rasters ----
 		modelled_ras <- c(suitability_ras, binarised_ras)
 		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
-		writeCDF(modelled_ras, 
+		try(writeCDF(modelled_ras, 
 						 file.path(getwd(), paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
 						 overwrite = TRUE
 						 )
+				)
 				 
 		# REPORTING BACK TO LIST ----
 		list(Outputs = modelled_ras,
