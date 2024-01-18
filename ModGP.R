@@ -10,6 +10,7 @@
 
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
+rm(list=ls())
 
 ## Packages ---------------------------------------------------------------
 install.load.package <- function(x) {
@@ -36,7 +37,9 @@ package_vec <- c(
 	"giscoR", # for shapefiles of Earth
 	"Epi", # for ROC statistic
 	"raster", # for raster objects
-	"stars" # for fast raster operations
+	"stars", # for fast raster operations
+	"png", # for loading pngs back into R
+	"grid" # for making pngs into ggplot object via rastergrob
 )
 sapply(package_vec, install.load.package)
 
@@ -174,10 +177,13 @@ SDMModel_ls <- FUN.ExecSDM(
 	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE)
 
 # # OUTPUTS =================================================================
-# ## Plotting ---------------------------------------------------------------
-# SDM_viz <- FUN.Viz(SDMModel_ls = SDMModel_ls, SDMInput_ls = SDMInput_ls, BV_ras = BV_ras,
-# 				Dir = Dir.Exports)
-# 
-# ## Posthoc ----------------------------------------------------------------
-# Posthoc_viz <- FUN.Posthoc(SDMModel_ls = SDMModel_ls, Covariates = PH_stack, CutOff = 0.6,
-# 						Dir = Dir.Exports)
+## Plotting ---------------------------------------------------------------
+SDM_outs <- FUN.ShinyPrep(SDMModel_ls = SDMModel_ls, 
+													SDMInput_ls = SDMInput_ls, 
+													Dir = Dir.Exports)
+
+## Plotting ---------------------------------------------------------------
+SDM_viz <- FUN.Viz(SDM_outs = SDM_outs,
+									 BV_ras = BV_ras,
+									 Covariates = PH_stack, 
+									 Dir = Dir.Exports)
