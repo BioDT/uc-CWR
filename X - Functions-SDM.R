@@ -80,12 +80,12 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 												BV_ras = NULL, # stack of environmental variables
 												Dir = NULL, # where to save output
 												Force = FALSE, # whether to force re-running
-												KeepModels = TRUE # whether to retain the ISDM model objects
+												KeepModels = TRUE, # whether to retain the ISDM model objects
+												Drivers = NULL # which drivers to make PNG response curve plots for
 ){
 	setwd(Dir)
 	GenName <- strsplit(names(SDMData_ls)[1], split = " ")[[1]][1]
-	FNAME <- file.path(Dir, paste0(GenName, "_SDMData.RData"))
-	projName <- paste0("ISDM-", GenName)
+	FNAME <- file.path(Dir, GenName, "_SDMData.RData")
 	
 	if(file.exists(FNAME) & !Force){
 		SDMModel_ls <- loadObj(FNAME)
@@ -94,12 +94,14 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, FUN = function(SDMModel_Iter){
+		# SDMModel_Iter <- SDMData_ls[[1]]
 		
 		# PRESENCE/ABSENCE -------
 		Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
 		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
 		Occ_df$modelSpec <- spec_name
-		print(spec_name)
+		Dir_spec <- file.path(Dir, GenName, str_replace(spec_name, " ", "_"))
+		# print(spec_name)
 		Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
 		
 		# COVARIATES -------
@@ -110,9 +112,9 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		
 		Occ_sf <- st_transform(Occ_sf, crs = st_crs(cov))
 		
-		if(file.exists(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds")) &
+		if(file.exists(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds")) &
 			 !Force){
-			message(paste("ISDM already compiled for ", spec_name, "with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"))
+			message(paste("ISDM already compiled for", spec_name, "with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"))
 		}else{
 			message(paste("Compiling ISDM for", spec_name))
 			
@@ -122,7 +124,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 			workflow <- startWorkflow(
 				Projection = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0',
 				Species = unique(Occ_df$modelSpec),
-				saveOptions = list(projectName =  projName), Save = TRUE, Quiet = TRUE
+				saveOptions = list(projectName =  GenName), Save = TRUE, Quiet = TRUE
 			)
 			
 			### area ----
@@ -174,8 +176,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		
 		## Output ----
 		### reading back in ----
-		Predictions <- readRDS(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds"))
-		intModel <- readRDS(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "intModel.rds"))
+		Predictions <- readRDS(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds"))
+		intModel <- readRDS(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "intModel.rds"))
 		
 		### output rasters ----
 		#### predicted suitability ----
@@ -197,7 +199,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		colnames(RemoveNA) <- c("Suitability", "Observation")
 		RemoveNA <- na.omit(RemoveNA)
 		
-		png(file.path(getwd(), projName, gsub(spec_name, pattern = " ", replacement = "_"), "ROC.png"), width = 16, height = 16, units = "cm", res = 100)
+		png(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "ROC.png"), width = 16, height = 16, units = "cm", res = 100)
 		ROC <- Epi::ROC(test = RemoveNA$Suitability, stat = RemoveNA$Observation)
 		dev.off()
 		
@@ -209,17 +211,25 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		modelled_ras <- c(suitability_ras, binarised_ras)
 		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
 		try(writeCDF(modelled_ras, 
-						 file.path(getwd(), paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
+						 file.path(Dir_spec, paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
 						 overwrite = TRUE
 						 )
 				)
 				 
+		# MAKING SHINY OUTPUTS ----
+		Shiny_ls <- FUN.ShinyPrep(SDMModel_Iter, Dir_spec = Dir_spec)
+		
+		# MAKING PNGs FOR SHINY AND PRESENTATIONS ----
+		Plots_ls <- FUN.Viz(Shiny_ls, Model_ras = modelled_ras, 
+												BV_ras, Covariates = Drivers, 
+						Dir_spec = Dir_spec)
+		
 		# REPORTING BACK TO LIST ----
 		list(Outputs = modelled_ras,
 				 ISDM = intModel)
 	})
 	saveObj(SDMModel_ls, file = FNAME)
-	if(!KeepModels){unlink(file.path(Dir, projName), recursive = TRUE)}
+	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
 	setwd(Dir.Base)
 	SDMModel_ls
 }

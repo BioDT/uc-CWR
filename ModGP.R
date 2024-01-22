@@ -133,10 +133,12 @@ BV_ras <- FUN.DownBV(T_Start = 1985, T_End = 2015,
 ## Posthoc Data -----------------------------------------------------------
 message("Retrieving additional covariates")
 #' For relating SDM outputs to other characteristics of interest to users
-PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
-PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
-PH_stack <- stack(PH_nutrient, PH_toxicity)
-names(PH_stack) <- c("Nutrient", "Toxicity")
+PH_nutrient <- rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+PH_toxicity <- rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+PH_stack <- c(PH_nutrient, PH_toxicity)
+PH_stack <- resample(PH_stack, rast(BV_ras))
+PH_stack <- c(PH_stack, rast(BV_ras)$BIO1, rast(BV_ras)$BIO12)
+names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
 
 ## SDM Data Preparations --------------------------------------------------
 message("Preparing data for SDM workflow")
@@ -174,16 +176,18 @@ useablespec_df <- do.call(rbind, useablespec_ls)
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
 	SDMData_ls = SDMInput_ls[which(useablespec_df$locs > 40 & useablespec_df$cells > 40)], 
-	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE)
+	BV_ras = BV_ras, Dir = Dir.Exports, Force = FALSE, KeepModels = TRUE,
+	Drivers = PH_stack)
 
 # # OUTPUTS =================================================================
-## Plotting ---------------------------------------------------------------
-SDM_outs <- FUN.ShinyPrep(SDMModel_ls = SDMModel_ls, 
-													SDMInput_ls = SDMInput_ls, 
-													Dir = Dir.Exports)
-
-## Plotting ---------------------------------------------------------------
-SDM_viz <- FUN.Viz(SDM_outs = SDM_outs,
-									 BV_ras = BV_ras,
-									 Covariates = PH_stack,
-									 Dir = Dir.Exports)
+# ## Shiny Data Object ------------------------------------------------------
+# SDM_outs <- FUN.ShinyPrep(SDMModel_ls = SDMModel_ls, 
+# 													SDMInput_ls = SDMInput_ls, 
+# 													Dir = Dir.Exports)
+# save(SDM_outs, file = "Tomas.RData")
+# 
+# ## Plotting ---------------------------------------------------------------
+# SDM_viz <- FUN.Viz(SDM_outs = SDM_outs,
+# 									 BV_ras = BV_ras,
+# 									 Covariates = PH_stack,
+# 									 Dir = Dir.Exports)

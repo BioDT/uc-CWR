@@ -22,7 +22,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	FNAME <- file.path(Dir, paste0(species[1], ".RData"))
 		if(!Force & file.exists(FNAME)){
 			save_ls <- loadObj(FNAME)
-			warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+			message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 			return(save_ls)
 			}
 	
@@ -107,7 +107,7 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 	if(file.exists(FNAME)){
 		BV_ras <- stack(FNAME)
 		names(BV_ras) <- paste0("BIO", 1:19)
-		warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(BV_ras)
 	}
 	

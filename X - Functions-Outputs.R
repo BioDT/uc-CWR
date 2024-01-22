@@ -62,69 +62,62 @@ Plot_BC <- function(BC_ras, Shp = NULL, Water_Var = "Precipitation", which = "Al
 }
 
 # SDM PREDICTION VISUALISATION --------------------------------------------
-FUN.ShinyPrep <- function(SDMModel_ls, SDMInput_ls, Dir){
-	ShinyPrep_ls <- pblapply(names(SDMModel_ls), FUN = function(SpecName){
-		Pres_df <- SDMInput_ls[[SpecName]]$PA[SDMInput_ls[[SpecName]]$PA$PRESENCE == 1, c("lat", "lon", "gbifID", "PRESENCE")]
-		Abs_df <- SDMInput_ls[[SpecName]]$PA[SDMInput_ls[[SpecName]]$PA$PRESENCE == 0, c("lat", "lon", "gbifID", "PRESENCE")]
+FUN.ShinyPrep <- function(SDMModel_Iter, Dir_spec){
+		Pres_df <- SDMModel_Iter$PA[SDMModel_Iter$PA$PRESENCE == 1, c("lat", "lon", "gbifID", "PRESENCE")]
+		Abs_df <- SDMModel_Iter$PA[SDMModel_Iter$PA$PRESENCE == 0, c("lat", "lon", "gbifID", "PRESENCE")]
 		
 		Pres_sf <- st_as_sf(Pres_df, coords = c("lon", "lat"))
 		Abs_sf <- st_as_sf(Abs_df, coords = c("lon", "lat"))
 		
 		Buffer_sf <- st_union(st_buffer(Pres_sf, 15))
 		
-		list(
-			Outputs = list(Suitability = exp(SDMModel_ls[[SpecName]]$Outputs$Suitability),
-										 `Presence/Absence` = SDMModel_ls[[SpecName]]$Outputs$`Predicted Presence/Absence`),
-			Inputs = list(Presences = Pres_sf,
-										Absences = Abs_sf,
-										Buffer = Buffer_sf,
-										BVs = colnames(SDMInput_ls[[SpecName]]$PA)[startsWith(colnames(SDMInput_ls[[SpecName]]$PA), "BIO")])
-		)
-	})
-	names(ShinyPrep_ls) <- names(SDMModel_ls)
-	return(ShinyPrep_ls)
+		Shiny_ls <- list(Presences = Pres_sf,
+				 Absences = Abs_sf,
+				 Buffer = Buffer_sf,
+				 BVs = colnames(SDMModel_Iter$PA)[startsWith(colnames(SDMModel_Iter$PA), "BIO")]
+				 )
+	
+		save(Shiny_ls, file = file.path(Dir_spec, "ShinyData.RData"))
+
+		return(Shiny_ls)
 }
 
 # SDM PREDICTION VISUALISATION --------------------------------------------
-FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
+FUN.Viz <- function(Shiny_ls, Model_ras, BV_ras, Covariates, Dir_spec){
 	
-	Covariates <- rast(Covariates)
-	
-	Plots_ls <- pblapply(names(SDM_outs), FUN = function(Species_iter){
-		# Species_iter <- names(SDM_outs)[1]
 		PA_df <- cbind(
-			data.frame(PRESENCE = c(SDM_outs[[Species_iter]]$Inputs$Presences$PRESENCE,
-															SDM_outs[[Species_iter]]$Inputs$Absences$PRESENCE)),
+			data.frame(PRESENCE = c(Shiny_ls$Presences$PRESENCE,
+															Shiny_ls$Absences$PRESENCE)),
 			rbind(
-				st_coordinates(SDM_outs[[Species_iter]]$Inputs$Presences), 
-				st_coordinates(SDM_outs[[Species_iter]]$Inputs$Absences)
+				st_coordinates(Shiny_ls$Presences), 
+				st_coordinates(Shiny_ls$Absences)
 				)
 			)
 		
-		buffer_sf <- SDM_outs[[Species_iter]]$Inputs$Buffer
+		buffer_sf <- Shiny_ls$Buffer
 		
-		BV_iter <- BV_ras[[SDM_outs[[Species_iter]]$Inputs$BVs]]
+		BV_iter <- BV_ras[[Shiny_ls$BVs]]
 		
-		## Fact Sheet ----
-		PA_tab <- data.frame(table(PA_df$PRESENCE))
-		colnames(PA_tab)[1] <- "P/A"
-		imgurlROC <- file.path(Dir.Exports, paste0("ISDM-", strsplit(Species_iter, split = " ")[[1]][1]),
-													 str_replace(Species_iter, " ", "_"), "ROC.png")
-		ROC <- readPNG(imgurlROC)
-		ROC <- rasterGrob(ROC, interpolate=TRUE)
-		
-		Fact_gg <- ggplot(data.frame(x = 1:5, y = 1:10), aes(x = x, y = y)) +
-			geom_point(col = "white") +
-			labs(title = Species_iter) +
-			annotate(geom = "text", x = 1.5, y = 10,
-							 label = "Absence/Presence") +
-			annotate(geom = "table",
-							 x = 1.2,
-							 y = 9.5,
-							 label = list(PA_tab)) +
-			annotation_custom(ROC, xmin=2, xmax=5, ymin=1, ymax=10) +
-			theme_void()
-		Fact_gg
+		# ## Fact Sheet ----
+		# PA_tab <- data.frame(table(PA_df$PRESENCE))
+		# colnames(PA_tab)[1] <- "P/A"
+		# imgurlROC <- file.path(Dir.Exports, paste0("ISDM-", strsplit(Species_iter, split = " ")[[1]][1]),
+		# 											 str_replace(Species_iter, " ", "_"), "ROC.png")
+		# ROC <- readPNG(imgurlROC)
+		# ROC <- rasterGrob(ROC, interpolate=TRUE)
+		# 
+		# Fact_gg <- ggplot(data.frame(x = 1:5, y = 1:10), aes(x = x, y = y)) +
+		# 	geom_point(col = "white") +
+		# 	labs(title = Species_iter) +
+		# 	annotate(geom = "text", x = 1.5, y = 10,
+		# 					 label = "Absence/Presence") +
+		# 	annotate(geom = "table",
+		# 					 x = 1.2,
+		# 					 y = 9.5,
+		# 					 label = list(PA_tab)) +
+		# 	annotation_custom(ROC, xmin=2, xmax=5, ymin=1, ymax=10) +
+		# 	theme_void()
+		# Fact_gg
 		
 		## SDM Input Visualisation ----
 		First_gg <- Plot_BC(BV_iter, as_Spatial(buffer_sf), which = names(BV_iter)[1]) + 
@@ -133,10 +126,12 @@ FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
 		Subseq_gg <- Plot_BC(BV_iter, as_Spatial(buffer_sf), which = names(BV_iter)[-1])
 		
 		Input_plot <- cowplot::plot_grid(First_gg, Subseq_gg, ncol = 1, 
-																		 rel_heights = c(1, floor((length(names(BV_iter))-1)/3)))
+																		 rel_heights = c(1, floor((length(names(BV_iter))-1)/2)))
+		ggsave(Input_plot, filename = file.path(Dir_spec, "INPUTS.png"), 
+					 width = 32, height = 12*ceiling(length(names(BV_iter))/2), units = "cm")
 		
 		## Probability plot ----
-		Probability1_df <- as.data.frame(SDM_outs[[Species_iter]]$Outputs$Suitability, xy = TRUE) # turn raster into dataframe
+		Probability1_df <- as.data.frame(exp(Model_ras$Suitability), xy = TRUE) # turn raster into dataframe
 		Probability_df <- gather(data = Probability1_df, key = Values, value = "value", colnames(Probability1_df)[c(-1, -2)]) #  make ggplot-ready
 		Probability_plot <- ggplot() + # create plot
 			geom_raster(data = Probability_df, aes(x = x, y = y, fill = value)) + # plot the covariate data
@@ -145,9 +140,11 @@ FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
 			scale_fill_gradientn(colors = viridis(100), na.value = "transparent") + # add colour and legend
 			theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) + # reduce margins (for fusing of plots)
 			theme(legend.key.size = unit(1, 'cm'), legend.position = "bottom")
+		ggsave(Probability_plot, filename = file.path(Dir_spec, "OUT_Suitability.png"), 
+					 width = 24, height = 16, units = "cm")
 		
 		## Binarised plot ----
-		Binarised1_df <- as.data.frame(SDM_outs[[Species_iter]]$Outputs$`Presence/Absence`, xy = TRUE) # turn raster into dataframe
+		Binarised1_df <- as.data.frame(Model_ras$`Predicted Presence/Absence`, xy = TRUE) # turn raster into dataframe
 		Binarised_df <- gather(data = Binarised1_df, key = Values, value = "value", colnames(Binarised1_df)[c(-1, -2)]) #  make ggplot-ready
 		Binarised_plot <- ggplot() + # create plot
 			geom_raster(data = Binarised_df, aes(x = x, y = y, fill = value)) + # plot the covariate data
@@ -156,11 +153,12 @@ FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
 			scale_fill_discrete(na.value = "transparent") + # add colour and legend
 			theme(plot.margin = unit(c(0, 0, 0, 0), "cm")) + # reduce margins (for fusing of plots)
 			theme(legend.key.size = unit(1, 'cm'), legend.position = "bottom")
+		ggsave(Binarised_plot, filename = file.path(Dir_spec, "OUT_Binary.png"), 
+					 width = 24, height = 16, units = "cm")
 		
 		## Response curves ----
-		Covariates <- terra::resample(Covariates, SDM_outs[[Species_iter]]$Outputs$Suitability)
-		Mask_ras <- !is.na(SDM_outs[[Species_iter]]$Outputs$Suitability)
-		Covariates <- mask(Covariates, SDM_outs[[Species_iter]]$Outputs$Suitability)
+		Mask_ras <- !is.na(Model_ras$Suitability)
+		Covariates <- mask(Covariates, Model_ras$Suitability)
 		Drivers_df <- as.data.frame(Covariates, xy = TRUE) # turn raster into dataframe
 		PH_df <- cbind(Drivers_df, Binarised1_df$`Predicted Presence/Absence`, Probability1_df$Suitability)
 		colnames(PH_df)[(nlyr(Covariates)+3):ncol(PH_df)] <- c("Presence/Absence", "Suitability")
@@ -176,32 +174,35 @@ FUN.Viz <- function(SDM_outs, BV_ras, Covariates, Dir){
 					 	binary_gg <- ggplot(na.omit(PH_iter), aes(y = Driver, x = `Presence/Absence`, fill = `Presence/Absence`)) + 
 					 		geom_violin() + 
 					 		stat_compare_means(aes(group = `Presence/Absence`), label = "p.format") + 
-					 		theme_bw() + labs(title = x)
-					 	cowplot::plot_grid(suitab_gg, binary_gg, ncol = 2)
+					 		theme_bw()
+					 	# + labs(title = x)
+					 	
+					 	ggsave(cowplot::plot_grid(suitab_gg, binary_gg, ncol = 2), 
+					 				 filename = file.path(Dir_spec, paste0("RESPCURV_", x,".png")), 
+					 				 width = 32, height = 16, units = "cm")
 					 })
 		resp_curves <- cowplot::plot_grid(plotlist = Drivers_ls, ncol = 1)
 		
 		## Returning plots ----
 		return_ls <- list(
-			Facts = Fact_gg,
+			# Facts = Fact_gg,
 			Inputs = Input_plot,
 			Probability = Probability_plot,
 			Binarised = Binarised_plot,
 			Responses = resp_curves
 		)
 		return_ls
-	})
-	names(Plots_ls) <- names(SDM_outs)
-
-	ggsave(
-		filename = 
-			file.path(Dir, paste0(
-				unique(unlist(lapply(strsplit(names(SDM_outs), split = " "), "[[", 1))), "Plots.pdf")), 
-		plot = marrangeGrob(unlist(Plots_ls, recursive = FALSE), nrow=1, ncol=1), 
-		width = 15, height = 12
-	)
+	# names(Plots_ls) <- names(SDM_outs)
+	# 
+	# ggsave(
+	# 	filename = 
+	# 		file.path(Dir, paste0(
+	# 			unique(unlist(lapply(strsplit(names(SDM_outs), split = " "), "[[", 1))), "Plots.pdf")), 
+	# 	plot = marrangeGrob(unlist(Plots_ls, recursive = FALSE), nrow=1, ncol=1), 
+	# 	width = 15, height = 12
+	# )
+	# 
+	# unlink(list.files(Dir, pattern = "TEMPPlot", full.names = TRUE))
 	
-	unlink(list.files(Dir, pattern = "TEMPPlot", full.names = TRUE))
-	
-	Plots_ls
+	# Plots_ls
 }
