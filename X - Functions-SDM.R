@@ -190,7 +190,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		preds <- rast(preds)
 		suitability_ras <- # exp(
 			preds
-			#) # exp() can produce serious outliers
+		#) # exp() can produce serious outliers
 		
 		#### binarising suitability
 		Occ_ras <- rasterize(Occ_sf, cov, field = "PRESENCE")
@@ -211,18 +211,22 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of occurrences per species in 
 		modelled_ras <- c(suitability_ras, binarised_ras)
 		names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
 		try(writeCDF(modelled_ras, 
-						 file.path(Dir_spec, paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
-						 overwrite = TRUE
-						 )
-				)
-				 
-		# MAKING SHINY OUTPUTS ----
-		Shiny_ls <- FUN.ShinyPrep(SDMModel_Iter, Dir_spec = Dir_spec)
+								 file.path(Dir_spec, paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
+								 overwrite = TRUE
+		)
+		)
 		
-		# MAKING PNGs FOR SHINY AND PRESENTATIONS ----
-		Plots_ls <- FUN.Viz(Shiny_ls, Model_ras = modelled_ras, 
-												BV_ras, Covariates = Drivers, 
-						Dir_spec = Dir_spec)
+		if(length(list.files(Dir_spec, pattern = "RESPCURV")) == nlyr(PH_stack)){
+			message("Shiny data and plots already produced.")
+		}else{
+			# MAKING SHINY OUTPUTS ----
+			Shiny_ls <- FUN.ShinyPrep(SDMModel_Iter, Dir_spec = Dir_spec)
+			
+			# MAKING PNGs FOR SHINY AND PRESENTATIONS ----
+			Plots_ls <- FUN.Viz(Shiny_ls, Model_ras = modelled_ras, 
+													BV_ras, Covariates = Drivers, 
+													Dir_spec = Dir_spec)
+		}
 		
 		# REPORTING BACK TO LIST ----
 		list(Outputs = modelled_ras,
