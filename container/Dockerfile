@@ -56,7 +56,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     conda install -c conda-forge --override-channels \
         r-rcpparmadillo \
-        r-ggplot2 \
         r-iterators \
         r-sp \
         r-raster \
@@ -64,7 +63,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-rnaturalearth \
         r-ncdf4 \
         r-epi \
-        r-stars \
         r-png \
         r-keyring \
         r-codetools \
@@ -87,6 +85,14 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-doSNOW \
         r-automap \
         r-fasterize \
+        r-stars \
+        r-ggplot2 \
+        r-ggpubr \
+        r-tidyr \
+        r-viridis \
+        r-cowplot \
+        r-ggpmisc \
+        r-gridExtra \
         && \
     /conda/bin/conda clean -afy
 

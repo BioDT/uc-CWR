@@ -1,6 +1,6 @@
 IMAGE_ROOT?=ghcr.io/biodt
 IMAGE=cwr
-IMAGE_VERSION=0.2.0-a
+IMAGE_VERSION=0.2.0-a.3
 R_VERSION=4.3.2
 
 
