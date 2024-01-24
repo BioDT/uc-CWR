@@ -116,6 +116,7 @@ COPY --from=conda /conda/env/ /conda/env/
 
 ENV PROJ_DATA=/conda/env/share/proj \
     PATH=/conda/env/bin:$PATH \
+    R_KEYRING_BACKEND=env \
     LC_ALL=C.UTF-8
 
 ENTRYPOINT ["Rscript"]
