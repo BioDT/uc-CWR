@@ -57,30 +57,36 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda install -c conda-forge --override-channels \
         r-rcpparmadillo \
         r-ggplot2 \
-        r-lattice \
-        r-DescTools \
+        r-iterators \
         r-sp \
         r-raster \
         r-rgbif \
         r-rnaturalearth \
         r-ncdf4 \
+        r-epi \
+        r-stars \
+        r-png \
         r-keyring \
-        r-stringr \
+        r-codetools \
+        r-geometries \
+        r-jsonify \
+        r-rapidjsonr \
+        r-sfheaders \
+        r-countrycode \
+        r-geojsonsf \
+        r-inlabru \
+        r-r.devices \
+        r-dbi \
+        r-rlang \
+        r-glue \
+        r-withr \
+        r-fmesher \
         r-rgdal \
         r-doParallel \
         r-foreach \
         r-doSNOW \
         r-automap \
-        r-lubridate \
         r-fasterize \
-        r-stars \
-        r-httr \
-        r-ggpubr \
-        r-tidyr \
-        r-viridis \
-        r-cowplot \
-        r-ggpmisc \
-        r-gridExtra \
         && \
     /conda/bin/conda clean -afy
 
@@ -88,13 +94,25 @@ RUN . /conda/etc/profile.d/conda.sh && \
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     Rscript -e 'install.packages(c( \
-        "overlapping", \
+        "blockCV", \
         "ecmwfr", \
-        "sdm", \
+        "giscoR", \
+        "tidyterra", \
+        "geodata", \
         "usdm" \
         ), repos="https://cloud.r-project.org")' && \
     /conda/bin/conda clean -afy
 
+# Install intSDM etc
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
+    # Installing intSDM directly from github doesn't work so we install it first from cran
+    Rscript -e 'install.packages("intSDM", repos="https://cloud.r-project.org")' && \
+    Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
+
+# Install KrigR
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
