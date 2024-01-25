@@ -126,6 +126,33 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
+# Install packages for capfitogen
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    conda install -c conda-forge --override-channels \
+        r-sp \
+        r-raster \
+        r-maptools \
+        r-dismo \
+        r-rgdal \
+        r-rgeos \
+        r-RJSONIO \
+        r-googleVis \
+        r-cluster \
+        r-ade4 \
+        r-labdsv \
+        r-mclust \
+        r-clustvarsel \
+        r-randomForest \
+        r-modeltools \
+        r-lattice \
+        r-flexmix \
+        r-fpc \
+        r-vegan \
+        r-adegenet \
+        && \
+    /conda/bin/conda clean -afy
+
 # Clean files not needed runtime
 RUN find -L /conda/env/ -type f -name '*.a' -delete -print && \
     find -L /conda/env/ -type f -name '*.js.map' -delete -print
