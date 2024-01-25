@@ -177,6 +177,8 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
     # Bugfix: https://github.com/hrue/r-inla/issues/86#issuecomment-1837534618
     Rscript -e 'install.packages("MatrixModels", type="source")' && \
+    # Fix permissions
+    find /conda/env/lib/R/library/INLA/ -type f -perm -u+x -exec chmod a+x {} \; && \
     /conda/bin/conda clean -afy
 
 # Install intSDM etc
