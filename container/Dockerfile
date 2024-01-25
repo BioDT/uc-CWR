@@ -170,11 +170,20 @@ RUN . /conda/etc/profile.d/conda.sh && \
         ))' && \
     /conda/bin/conda clean -afy
 
+# Install INLA
+# See https://www.r-inla.org/download-install
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
+    # Bugfix: https://github.com/hrue/r-inla/issues/86#issuecomment-1837534618
+    Rscript -e 'install.packages("MatrixModels", type="source")' && \
+    /conda/bin/conda clean -afy
+
 # Install intSDM etc
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
-    # Installing intSDM directly from github doesn't work so we install it first from cran
+    # Bugfix: Installing intSDM directly from github doesn't work so we install it first from cran
     Rscript -e 'install.packages("intSDM")' && \
     Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
@@ -185,13 +194,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
     Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
-    /conda/bin/conda clean -afy
-
-# Install INLA
-# See https://www.r-inla.org/download-install
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
     /conda/bin/conda clean -afy
 
 # ENTRYPOINT ["bash"]
