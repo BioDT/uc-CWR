@@ -93,46 +93,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-cowplot \
         r-ggpmisc \
         r-gridExtra \
-        && \
-    /conda/bin/conda clean -afy
-
-# Set default CRAN repository
-RUN echo 'options(repos=c(CRAN="https://cloud.r-project.org"))' > /conda/env/lib/R/etc/Rprofile.site
-
-# Install non-conda-available packages
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'install.packages(c( \
-        "blockCV", \
-        "ecmwfr", \
-        "giscoR", \
-        "tidyterra", \
-        "geodata", \
-        "usdm" \
-        ))' && \
-    /conda/bin/conda clean -afy
-
-# Install intSDM etc
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
-    # Installing intSDM directly from github doesn't work so we install it first from cran
-    Rscript -e 'install.packages("intSDM")' && \
-    Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
-    /conda/bin/conda clean -afy
-
-# Install KrigR
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
-    # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
-    Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
-    /conda/bin/conda clean -afy
-
-# Install packages for capfitogen
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    conda install -c conda-forge --override-channels \
+        # Packages for capfitogen
         r-sp \
         r-raster \
         r-maptools \
@@ -153,13 +114,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-fpc \
         r-vegan \
         r-adegenet \
-        && \
-    /conda/bin/conda clean -afy
-
-# Packages for INLA
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    conda install -c conda-forge --override-channels \
+        # Packages for INLA
         r-locfit \
         r-ash \
         r-multicool \
@@ -199,6 +154,38 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
+# Set default CRAN repository
+RUN echo 'options(repos=c(CRAN="https://cloud.r-project.org"))' > /conda/env/lib/R/etc/Rprofile.site
+
+# Install non-conda-available packages
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'install.packages(c( \
+        "blockCV", \
+        "ecmwfr", \
+        "giscoR", \
+        "tidyterra", \
+        "geodata", \
+        "usdm" \
+        ))' && \
+    /conda/bin/conda clean -afy
+
+# Install intSDM etc
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
+    # Installing intSDM directly from github doesn't work so we install it first from cran
+    Rscript -e 'install.packages("intSDM")' && \
+    Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
+
+# Install KrigR
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
+    # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
+    Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
 
 # Install INLA
 # See https://www.r-inla.org/download-install
