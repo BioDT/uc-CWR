@@ -96,6 +96,9 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
+# Set default CRAN repository
+RUN echo 'options(repos=c(CRAN="https://cloud.r-project.org"))' > /conda/env/lib/R/etc/Rprofile.site
+
 # Install non-conda-available packages
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
@@ -106,7 +109,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "tidyterra", \
         "geodata", \
         "usdm" \
-        ), repos="https://cloud.r-project.org")' && \
+        ))' && \
     /conda/bin/conda clean -afy
 
 # Install intSDM etc
@@ -114,7 +117,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
     # Installing intSDM directly from github doesn't work so we install it first from cran
-    Rscript -e 'install.packages("intSDM", repos="https://cloud.r-project.org")' && \
+    Rscript -e 'install.packages("intSDM")' && \
     Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
@@ -196,7 +199,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
-RUN echo 'options(repos=c(CRAN="https://cloud.r-project.org"))' > /conda/env/lib/R/etc/Rprofile.site
 
 # Install INLA
 # See https://www.r-inla.org/download-install
