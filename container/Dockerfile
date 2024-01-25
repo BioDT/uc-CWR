@@ -153,6 +153,60 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
+# Packages for INLA
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    conda install -c conda-forge --override-channels \
+        r-locfit \
+        r-ash \
+        r-multicool \
+        r-pracma \
+        r-hdrcde \
+        r-ks \
+        r-bitops \
+        r-rainbow \
+        r-RCurl \
+        r-fds \
+        r-deSolve \
+        r-fda \
+        r-jpeg \
+        r-TeachingDemos \
+        r-coda \
+        r-mcmc \
+        r-dotCall64 \
+        r-rbibutils \
+        r-MCMCpack \
+        r-gtools \
+        r-spam \
+        r-maps \
+        r-dfidx \
+        r-Formula \
+        r-lmtest \
+        r-Rdpack \
+        r-mnormt \
+        r-Deriv \
+        r-evd \
+        r-fields \
+        r-gsl \
+        r-markdown \
+        r-mlogit \
+        r-rgl \
+        r-sn \
+        r-splancs \
+        && \
+    /conda/bin/conda clean -afy
+
+RUN echo 'options(repos=c(CRAN="https://cloud.r-project.org"))' > /conda/env/lib/R/etc/Rprofile.site
+
+# Install INLA
+# See https://www.r-inla.org/download-install
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
+    /conda/bin/conda clean -afy
+
+# ENTRYPOINT ["bash"]
+
 # Clean files not needed runtime
 RUN find -L /conda/env/ -type f -name '*.a' -delete -print && \
     find -L /conda/env/ -type f -name '*.js.map' -delete -print
