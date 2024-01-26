@@ -42,6 +42,8 @@ if (file.exists(file.path(resultados, "SelectedVariables_edaphic.xls"))) {
 } else {
     message("- executing")
     source(file.path(tools_dpath, "SelectVar.R"))
+    # Prevent crosstalk with the next step
+    rm(geophys)
 }
 
 #### ELCmapas #############################
