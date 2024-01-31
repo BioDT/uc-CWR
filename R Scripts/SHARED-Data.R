@@ -92,19 +92,19 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	### Parallel Set-Up ----
 	if(parallel == 1 | Mode == "Capfitogen"){parallel <- NULL} # no parallelisation
 	### This needs to be commented back in when wanting to run code below directly
-	# if(!is.null(parallel)){ # parallelisation
-	# 	message("Registering cluster for parallel processing")
-	# 	print("Registering cluster")
-	# 	parallel <- parallel::makeCluster(parallel)
-	# 	on.exit(stopCluster(parallel))
-	# 	print("R Objects loading to cluster")
-	# 	parallel::clusterExport(parallel, varlist = c(
-	# 		"package_vec", "install.load.package",
-	# 		"occ_occ"
-	# 	), envir = environment())
-	# 	print("R Packages loading on cluster")
-	# 	clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
-	# }
+	if(!is.null(parallel)){ # parallelisation
+		message("Registering cluster for parallel processing")
+		print("Registering cluster")
+		parallel <- parallel::makeCluster(parallel)
+		on.exit(stopCluster(parallel))
+		print("R Objects loading to cluster")
+		parallel::clusterExport(parallel, varlist = c(
+			"package_vec", "install.load.package",
+			"occ_occ"
+		), envir = environment())
+		print("R Packages loading on cluster")
+		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
+	}
 	
 	### Making SF for species ----
 	message("Extracting species-level data into MULTIPOINT objects")
@@ -124,8 +124,8 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 											 	spec_df$presence <- 1
 											 	st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
 											 })
-	# stopCluster(parallel)
-	# closeAllConnections()
+	stopCluster(parallel)
+	closeAllConnections()
 	names(specs_ls) <- GBIF_specs
 	
 	## Making list into single data frame when Capfitogen mode is toggled on.
