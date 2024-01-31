@@ -112,7 +112,7 @@ CreateDir <- sapply(Dirs, function(x){
 rm(Dirs)
 
 ## API Credentials --------------------------------------------------------
-try(source(file.path(Dir.Scripts, "X - PersonalSettings.R")))
+try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
 if(as.character(options("gbif_user")) == "NULL" ){
 	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
 if(as.character(options("gbif_email")) == "NULL" ){
