@@ -321,12 +321,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															sink(file.path(Dir_spec, "ExecutionDuration.txt"))
 															print(end_time - start_time)
 															sink()
-															
 														}
-														
-														sink(file.path(Dir_spec, "Progress.txt"))
-														print("6 Reading output back in")
-														sink()
 														
 														## Output ----
 														### reading back in ----
