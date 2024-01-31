@@ -2,85 +2,60 @@
 #' PROJECT: [BioDT CWR] 
 #' CONTENTS: 
 #'  - GBIF Data Download Functionality
-#'  - Bioclimativ Variable Climatology creation for qsoil1 anbd qsoil2 combined
+#'  - Bioclimatic Variable Climatology creation for qsoil1 and qsoil2 combined
 #'  DEPENDENCIES:
 #'  - None
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
 
-# PACKAGES -----------------------------------------------------------------
-package_vec <- c(
-	"terra", # for alternative raster handling
-	"rgbif", # for gbif access
-	"sf", # for spatialfeatures
-	"sp", # for spatialpoints and polygons
-	"rnaturalearth", # for landmask
-	"parallel", # for parallel runs
-	"pbapply" # for parallelised apply functions and estimators
-)
-sapply(package_vec, install.load.package)
-
-### NON-CRAN PACKAGES ----
-if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
-	devtools::install_github("ErikKusch/KrigR")
-}
-library(KrigR)
-
-# REGISTER API CREDENTIALS -------------------------------------------------
-try(source("X - PersonalSettings.R")) 
-if(as.character(options("gbif_user")) == "NULL" ){
-	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
-if(as.character(options("gbif_email")) == "NULL" ){
-	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
-if(as.character(options("gbif_pwd")) == "NULL" ){
-	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
-
-if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
-	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
-	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
-} # end of CDS API check
-# NUMBER OF CORES
-if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
-} # end of Core check
-
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
-# queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object
+# queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object and GBIF download metadata
 FUN.DownGBIF <- function(species = NULL, # species name as character for whose genus data is to be downloaded
-												Dir = getwd(), # where to store the data
-												Force = FALSE # whether the download should be forced despite local data already existing
-												){
+												 Dir = getwd(), # where to store the data
+												 Force = FALSE, # whether the download should be forced despite local data already existing
+												 Mode = "ModGP", # which specification to run, either for whole GENUS of supplied species (ModGP), or for species directly (Capfitogen)
+												 parallel = 1 # an integer, 1 = sequential; always defaults to sequential when Mode == "Capfitogen"
+){
 	## Preparing species name identifiers
 	input_species <- species
-	species <- strsplit(input_species, " ")[[1]]
+	
+	## Focussing on Genus-part of the name if Mode is set to ModGP
+	if(Mode == "ModGP"){
+		species <- strsplit(input_species, " ")[[1]][1]
+	}
 	
 	## Filename and data presence check
-	FNAME <- file.path(Dir, paste0(species[1], ".RData"))
-		if(!Force & file.exists(FNAME)){
-			save_ls <- loadObj(FNAME)
-			warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-			return(save_ls)
-			}
+	FNAME <- file.path(Dir, paste0(species, ".RData"))
+	if(!Force & file.exists(FNAME)){
+		save_ls <- loadObj(FNAME)
+		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		return(save_ls)
+	}
 	
 	## Function start
 	message("Starting GBIF data retrieval")
-	## input validation
-	if(length(species) < 2){stop("The species name supplied is likely malformed. It should contain at least two words separated by a space.")}
-	
 	## GBIF ID Query ----
 	## GBIF query
-	message(paste("## Resolving", species[1], "at genus level"))
-	GBIF_match <- name_backbone(name = species[1], 
-															rank = tolower("GENUS"), kingdom = "plante")
+	if(Mode == "ModGP"){
+		message(paste("## Resolving", species, "at genus level"))
+		RankGBIF <- "genus"
+	}
+	if(Mode == "Capfitogen"){
+		message(paste("## Resolving", species, "at species level"))
+		RankGBIF <- "species"
+	}
+	GBIF_match <- name_backbone(name = species, 
+															rank = RankGBIF, kingdom = "plante")
+	
 	## Extracting taxonkey
-	tax_ID <- ifelse(GBIF_match$rank != "GENUS", NA, 
-									 GBIF_match$usageKey[GBIF_match$rank == "GENUS"])
+	tax_ID <- ifelse(GBIF_match$rank != toupper(RankGBIF), NA, 
+									 GBIF_match$usageKey[GBIF_match$rank == toupper(RankGBIF)])
+	
 	## checking GBIF match success
 	if(is.na(tax_ID)){
 		print(GBIF_match)
 		stop("The provided species name could not be resolved at GBIF. Please find the match at GBIF above.")
-		}
+	}
 	
 	## GBIF Data Query ----
 	message(paste("## Downloading", 
@@ -94,7 +69,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 													 format = "SIMPLE_CSV")
 	curlopts <- list(http_version = 2) # needed on Mac to avoid HTTP issues in next line (see here: https://github.com/ropensci/rgbif/issues/579)
 	occ_meta <- occ_download_wait(occ_down, status_ping = 30, 
-																 curlopts = list(), quiet = FALSE) # wait for download to finish
+																curlopts = list(), quiet = FALSE) # wait for download to finish
 	occ_get <- occ_download_get(occ_down, path = Dir) # download data
 	curlopts <- list(http_version = 1) # resetting this to not affect other functions
 	
@@ -114,37 +89,82 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	## removing empty species rows
 	occ_occ <- occ_occ[occ_occ$species != "" & !is.na(occ_occ$species), ]
 	
+	### Parallel Set-Up ----
+	if(parallel == 1 | Mode == "Capfitogen"){parallel <- NULL} # no parallelisation
+	### This needs to be commented back in when wanting to run code below directly
+	# if(!is.null(parallel)){ # parallelisation
+	# 	message("Registering cluster for parallel processing")
+	# 	print("Registering cluster")
+	# 	parallel <- parallel::makeCluster(parallel)
+	# 	on.exit(stopCluster(parallel))
+	# 	print("R Objects loading to cluster")
+	# 	parallel::clusterExport(parallel, varlist = c(
+	# 		"package_vec", "install.load.package",
+	# 		"occ_occ"
+	# 	), envir = environment())
+	# 	print("R Packages loading on cluster")
+	# 	clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
+	# }
+	
 	### Making SF for species ----
 	message("Extracting species-level data into MULTIPOINT objects")
 	GBIF_specs <- unique(occ_occ$species)
+	
 	## Making a list of spatialfeatures MULTIPOINT objects denoting unique locations of presence per species
-	specs_ls <- pblapply(GBIF_specs, FUN = function(x){
-		spec_df <- occ_occ[occ_occ$species == x, ]
-		spec_uniloca <- occ_occ[occ_occ$species == x, c("species", "decimalLatitude", "decimalLongitude")]
-		spec_df <- spec_df[!duplicated(spec_uniloca), 
-											 c("gbifID", "datasetKey", "occurrenceID", "species", "scientificName", "speciesKey",
-											 	"decimalLatitude", "decimalLongitude", "coordinateUncertaintyInMeters",
-											 	"eventDate", "basisOfRecord", "recordNumber", "issue")
-											 ]
-		spec_df$presence <- 1
-		st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
-	})
+	specs_ls <- pblapply(GBIF_specs, 
+											 cl = parallel,
+											 FUN = function(x){
+											 	spec_df <- occ_occ[occ_occ$species == x, ]
+											 	spec_uniloca <- occ_occ[occ_occ$species == x, c("species", "decimalLatitude", "decimalLongitude")]
+											 	spec_df <- spec_df[!duplicated(spec_uniloca), 
+											 										 c("gbifID", "datasetKey", "occurrenceID", "species", "scientificName", "speciesKey",
+											 										 	"decimalLatitude", "decimalLongitude", "coordinateUncertaintyInMeters",
+											 										 	"eventDate", "basisOfRecord", "recordNumber", "issue")
+											 	]
+											 	spec_df$presence <- 1
+											 	st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
+											 })
+	# stopCluster(parallel)
+	# closeAllConnections()
 	names(specs_ls) <- GBIF_specs
+	
+	## Making list into single data frame when Capfitogen mode is toggled on.
+	if(Mode == "Capfitogen"){
+		specs_ls <- specs_ls[[1]]
+		## create capfitogen data frame
+		CapfitogenColumns <- c("INSTCODE", "ACCENUMB", "COLLNUMB", "COLLCODE", "COLLNAME", "COLLINSTADDRESS", "COLLMISSID", "GENUS", "SPECIES", "SPAUTHOR", "SUBTAXA", "SUBTAUTHOR", "CROPNAME", "ACCENAME", "ACQDATE", "ORIGCTY", "NAMECTY", "ADM1", "ADM2", "ADM3", "ADM4", "COLLSITE", "DECLATITUDE", "LATITUDE", "DECLONGITUDE", "LONGITUDE", "COORDUNCERT", "COORDDATUM", "GEOREFMETH", "ELEVATION", "COLLDATE", "BREDCODE", "BREDNAME", "SAMPSTAT", "ANCEST", "COLLSRC", "DONORCODE", "DONORNAME", "DONORNUMB", "OTHERNUMB", "DUPLSITE", "DUPLINSTNAME", "STORAGE", "MLSSTAT", "REMARKS")
+		CapfitogenData <- data.frame(matrix(data = NA, nrow = nrow(specs_ls), ncol = length(CapfitogenColumns)))
+		colnames(CapfitogenData) <- CapfitogenColumns
+		## Create unique rownames for the ACCENUMB
+		CapfitogenData$ACCENUMB <- seq(from = 1, to = nrow(CapfitogenData), by = 1)
+		## Add in the species, latitude and longitude (nothing else at this point)
+		CapfitogenData$SPECIES <- specs_ls$species
+		CapfitogenData$DECLATITUDE <- st_coordinates(specs_ls)[,"Y"]
+		CapfitogenData$DECLONGITUDE <- st_coordinates(specs_ls)[,"X"]
+		specs_ls <- CapfitogenData
+	}
+	
+	### Returning Object to Disk and Environment ----
 	save_ls <- list(meta = occ_meta,
-									 occs = specs_ls)
+									occs = specs_ls)
 	saveObj(save_ls, file = FNAME)
 	unlink(occ_get) # removes .zip file
 	save_ls
 }
 
 # BIOCLIMATIC VARIABLE DOWNLOAD --------------------------------------------
-FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
+#' queries and downloads and computes bioclimatic variables at global extent from ERA5-Land, Water availability is based on soil moisture level 1 (0-7cm) and 2 (7-28cm)
+FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculation in
+											 T_End = 2000, # what year to end climatology calculation in
+											 Dir = getwd(), # where to store the data output on disk
+											 Force = FALSE # do not overwrite already present data
+											 ){
 	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
 	
 	if(file.exists(FNAME)){
 		BV_ras <- stack(FNAME)
 		names(BV_ras) <- paste0("BIO", 1:19)
-		warning("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(BV_ras)
 	}
 	
@@ -159,7 +179,7 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 	WaterPresent <- list.files(Dir, pattern = "volumetric_soil_water_layer_1")
 	AlreadyPresent <- length(unique(grep(paste(MonthsNeeded,collapse="|"), WaterPresent, value=TRUE)))
 	if(AlreadyPresent != length(Month_seq)){
-		#### Downloading ####
+		#### Downloading ----
 		Qsoil1_ras <- download_ERA(
 			Variable = "volumetric_soil_water_layer_1",
 			DataSet = "era5-land",
@@ -185,16 +205,16 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 			SingularDL = TRUE
 		)
 		
-		#### Combining ####
+		#### Combining ----
 		QSoilCombin_ras <- rast(Qsoil1_ras)+rast(Qsoil2_ras)
 		
-		#### Saving ####
+		#### Saving ----
 		for(MonthSave_iter in 1:nlyr(QSoilCombin_ras)){
 			FNAME <- file.path(Dir, paste0("volumetric_soil_water_layer_1-mean-", Month_seq[[MonthSave_iter]][1], "_", Month_seq[[MonthSave_iter]][2], "MonthlyBC.nc"))
 			terra::writeCDF(QSoilCombin_ras[[MonthSave_iter]], filename = FNAME, overwrite = TRUE)
 		}
 		
-		### Deleting unnecessary files ####
+		### Deleting unnecessary files ----
 		unlink(list.files(Dir, pattern = "Qsoil", full.names = TRUE))
 	}
 	
@@ -218,13 +238,13 @@ FUN.DownBV <- function(T_Start, T_End, Dir, Force = FALSE){
 		)
 	}
 	
-	### Masking ####
+	### Masking ----
 	Land_sp <- ne_countries(type = "countries", scale = "medium")
 	BV_ras <- crop(BV_ras, extent(Land_sp))
 	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
 	BV_ras <- mask(BV_ras, BV_mask)
 	
-	### Saving ####
+	### Saving ----
 	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
 	unlink(file.path(Dir, "Qsoil_BC.nc"))
 	names(BV_ras) <- paste0("BIO", 1:19)
