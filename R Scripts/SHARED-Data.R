@@ -124,10 +124,10 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 											 	spec_df$presence <- 1
 											 	st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
 											 })
-	if(!is.null(parallel)){
-		stopCluster(parallel)
-		closeAllConnections()
-	}
+	# if(!is.null(parallel)){
+	# 	stopCluster(parallel)
+	# 	closeAllConnections()
+	# }
 	names(specs_ls) <- GBIF_specs
 	
 	## Making list into single data frame when Capfitogen mode is toggled on.

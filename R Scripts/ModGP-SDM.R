@@ -99,10 +99,10 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		list(PA = PA_df)
 		
 	})
-	if(!is.null(parallel)){
-		stopCluster(parallel)
-		closeAllConnections()
-	}
+	# if(!is.null(parallel)){
+	# 	stopCluster(parallel)
+	# 	closeAllConnections()
+	# }
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
@@ -170,11 +170,12 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 														 	## report back
 														 	data.frame(locs = useableocc, cells = uniquecells)
 														 })
-	if(!is.null(parallel)){
-		stopCluster(parallel)
-		closeAllConnections()
-	}
 	useablespec_df <- do.call(rbind, useablespec_ls)
+
+	# if(!is.null(parallel)){
+	# 	stopCluster(parallel)
+	# 	closeAllConnections()
+	# }
 	
 	### Selection and Cutoffs ----
 	Input_ls <- Input_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
@@ -385,10 +386,10 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														list(Outputs = modelled_ras,
 																 ISDM = intModel)
 													})
-	if(!is.null(parallel)){
-		stopCluster(parallel)
-		closeAllConnections()
-	}
+	# if(!is.null(parallel)){
+	# 	stopCluster(parallel)
+	# 	closeAllConnections()
+	# }
 	saveObj(SDMModel_ls, file = FNAME)
 	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
 	setwd(Dir.Base)
