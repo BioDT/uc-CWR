@@ -32,19 +32,19 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	# if(!is.null(parallel)){ # parallelisation
-	# 	message("Registering cluster for parallel processing")
-	# 	print("Registering cluster")
-	# 	parallel <- parallel::makeCluster(parallel)
-	# 	on.exit(stopCluster(parallel))
-	# 	print("R Objects loading to cluster")
-	# 	parallel::clusterExport(parallel, varlist = c(
-	# 		"package_vec", "install.load.package",
-	# 		"Species_sf", "BV_ras"
-	# 	), envir = environment())
-	# 	print("R Packages loading on cluster")
-	# 	clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
-	# }
+	if(!is.null(parallel)){ # parallelisation
+		message("Registering cluster for parallel processing")
+		print("Registering cluster")
+		parallel <- parallel::makeCluster(parallel)
+		on.exit(stopCluster(parallel))
+		print("R Objects loading to cluster")
+		parallel::clusterExport(parallel, varlist = c(
+			"package_vec", "install.load.package",
+			"Species_sf", "BV_ras"
+		), envir = environment())
+		print("R Packages loading on cluster")
+		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
+	}
 	
 	### Preparing Data Species by Species ----
 	message("Figuring out Presences and Absences for each species")
@@ -99,8 +99,8 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		list(PA = PA_df)
 		
 	})
-	# stopCluster(parallel)
-	# closeAllConnections()
+	stopCluster(parallel)
+	closeAllConnections()
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
@@ -121,19 +121,19 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	# if(!is.null(parallel)){ # parallelisation
-	# 	message("Registering cluster for parallel processing")
-	# 	print("Registering cluster")
-	# 	parallel <- parallel::makeCluster(parallel)
-	# 	on.exit(stopCluster(parallel))
-	# 	print("R Objects loading to cluster")
-	# 	parallel::clusterExport(parallel, varlist = c(
-	# 		"package_vec", "install.load.package",
-	# 		"Globe_sf", "BV_ras"
-	# 	), envir = environment())
-	# 	print("R Packages loading on cluster")
-	# 	clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
-	# }
+	if(!is.null(parallel)){ # parallelisation
+		message("Registering cluster for parallel processing")
+		print("Registering cluster")
+		parallel <- parallel::makeCluster(parallel)
+		on.exit(stopCluster(parallel))
+		print("R Objects loading to cluster")
+		parallel::clusterExport(parallel, varlist = c(
+			"package_vec", "install.load.package",
+			"Globe_sf", "BV_ras"
+		), envir = environment())
+		print("R Packages loading on cluster")
+		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
+	}
 	
 	useablespec_ls <- pblapply(Input_ls, 
 														 cl = parallel,
@@ -168,8 +168,8 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 														 	## report back
 														 	data.frame(locs = useableocc, cells = uniquecells)
 														 })
-	# stopCluster(parallel)
-	# closeAllConnections()
+	stopCluster(parallel)
+	closeAllConnections()
 	useablespec_df <- do.call(rbind, useablespec_ls)
 	
 	### Selection and Cutoffs ----
@@ -200,21 +200,21 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	# if(!is.null(parallel)){ # parallelisation
-	# 	message("Registering cluster for parallel processing")
-	# 	print("Registering cluster")
-	# 	parallel <- parallel::makeCluster(parallel)
-	# 	on.exit(stopCluster(parallel))
-	# 	print("R Objects loading to cluster")
-	# 	parallel::clusterExport(parallel, varlist = c(
-	# 		"package_vec", "install.load.package",
-	# 		"BV_ras", "Drivers", "KeepModels", "Force", "Dir",
-	# 		"GenName", "FUN.Viz", "FUN.ShinyPrep", "Plot_BC", "%nin%",
-	# 		"parallel", "Dir.Data.ModGP")
-	# 	, envir = environment())
-	# 	print("R Packages loading on cluster")
-	# 	clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
-	# }
+	if(!is.null(parallel)){ # parallelisation
+		message("Registering cluster for parallel processing")
+		print("Registering cluster")
+		parallel <- parallel::makeCluster(parallel)
+		on.exit(stopCluster(parallel))
+		print("R Objects loading to cluster")
+		parallel::clusterExport(parallel, varlist = c(
+			"package_vec", "install.load.package",
+			"BV_ras", "Drivers", "KeepModels", "Force", "Dir",
+			"GenName", "FUN.Viz", "FUN.ShinyPrep", "Plot_BC", "%nin%",
+			"parallel", "Dir.Data.ModGP")
+		, envir = environment())
+		print("R Packages loading on cluster")
+		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
+	}
 	
 	SDMModel_ls <- pblapply(SDMData_ls, 
 													cl = parallel,
@@ -222,10 +222,10 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 		# SDMModel_Iter <- SDMData_ls[[1]]
 														
 														setwd(Dir)
-														if(!is.null(parallel)){
-															inla.setOption(num.threads = 1)
-															on.exit(inla.setOption(num.threads = parallel::detectCores()))
-															}
+														# if(!is.null(parallel)){
+														# 	inla.setOption(num.threads = 1)
+														# 	on.exit(inla.setOption(num.threads = parallel::detectCores()))
+														# 	}
 														
 														# LOADING RASTERS INTO MEMORY -------
 														## Loading covariate data
@@ -381,8 +381,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														list(Outputs = modelled_ras,
 																 ISDM = intModel)
 													})
-	# stopCluster(parallel)
-	# closeAllConnections()
+	stopCluster(parallel)
+	closeAllConnections()
 	saveObj(SDMModel_ls, file = FNAME)
 	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
 	setwd(Dir.Base)
