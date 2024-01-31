@@ -1,5 +1,6 @@
 # uc-CWR
-The code base for the Crop-Wild-Relative (CWR) use-case led by UiO
+
+1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 14 to execute ModGP pipeline for a specific genus.
 
 ## CAPFITOGEN demo
 
