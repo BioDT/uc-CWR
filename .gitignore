@@ -49,15 +49,19 @@ po/*~
 rsconnect/
 
 # Folders with Data
-Data/*
-!Data/GlobalAreaCRS.RData
-Exports/*
+*.nc
+*.RData
+*.png
+*.txt
+*.rds
+!Data/*/GlobalAreaCRS.RData
+
 Logo/*
 
 # DS Store for mac coding
 **/.DS_Store
 
-# API credential
+# API credentials
 X - PersonalSettings.R
 
 # Singularity images

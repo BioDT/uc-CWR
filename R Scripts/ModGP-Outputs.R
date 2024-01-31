@@ -8,22 +8,9 @@
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
 
-# PACKAGES -----------------------------------------------------------------
-package_vec <- c(
-	"raster", # for handling SDM raster outputs
-	"sp", # for points
-	"ggplot2", # for plotting engine
-	"ggpubr", # for t-test comparisons in ggplot
-	"tidyr", # for gather()
-	"viridis", # colour palettes
-	"cowplot", # grid plotting
-	"ggpmisc", # for table plotting in ggplot environment
-	"gridExtra" # for smooth plot saving in PDF
-)
-sapply(package_vec, install.load.package)
-
 # BIOCLIMATIC VARIABLE PLOTTING -------------------------------------------
 Plot_BC <- function(BC_ras, Shp = NULL, Water_Var = "Precipitation", which = "All"){
+	BV_ras <- readAll(BV_ras)
 	BC_names <- c("Annual Mean Temperature", "Mean Diurnal Range", "Isothermality", "Temperature Seasonality", "Max Temperature of Warmest Month", "Min Temperature of Coldest Month", "Temperature Annual Range (BIO5-BIO6)", "Mean Temperature of Wettest Quarter", "Mean Temperature of Driest Quarter", "Mean Temperature of Warmest Quarter", "Mean Temperature of Coldest Quarter", paste("Annual", Water_Var), paste(Water_Var, "of Wettest Month"), paste(Water_Var, "of Driest Month"), paste(Water_Var, "Seasonality"), paste(Water_Var, "of Wettest Quarter"), paste(Water_Var, "of Driest Quarter"), paste(Water_Var, "of Warmest Quarter"), paste(Water_Var, "of Coldest Quarter"))
 	BC_names <- paste0("BIO", 1:19, " - ", BC_names)
 	BC_df <- as.data.frame(BC_ras, xy = TRUE) # turn raster into dataframe
@@ -95,29 +82,10 @@ FUN.Viz <- function(Shiny_ls, Model_ras, BV_ras, Covariates, Dir_spec){
 			)
 		
 		buffer_sf <- Shiny_ls$Buffer
-		
+
+		## Loading covariate data
 		BV_iter <- BV_ras[[Shiny_ls$BVs]]
 		
-		# ## Fact Sheet ----
-		# PA_tab <- data.frame(table(PA_df$PRESENCE))
-		# colnames(PA_tab)[1] <- "P/A"
-		# imgurlROC <- file.path(Dir.Exports, paste0("ISDM-", strsplit(Species_iter, split = " ")[[1]][1]),
-		# 											 str_replace(Species_iter, " ", "_"), "ROC.png")
-		# ROC <- readPNG(imgurlROC)
-		# ROC <- rasterGrob(ROC, interpolate=TRUE)
-		# 
-		# Fact_gg <- ggplot(data.frame(x = 1:5, y = 1:10), aes(x = x, y = y)) +
-		# 	geom_point(col = "white") +
-		# 	labs(title = Species_iter) +
-		# 	annotate(geom = "text", x = 1.5, y = 10,
-		# 					 label = "Absence/Presence") +
-		# 	annotate(geom = "table",
-		# 					 x = 1.2,
-		# 					 y = 9.5,
-		# 					 label = list(PA_tab)) +
-		# 	annotation_custom(ROC, xmin=2, xmax=5, ymin=1, ymax=10) +
-		# 	theme_void()
-		# Fact_gg
 		
 		## SDM Input Visualisation ----
 		First_gg <- Plot_BC(BV_iter, as_Spatial(buffer_sf), which = names(BV_iter)[1]) + 
@@ -157,6 +125,10 @@ FUN.Viz <- function(Shiny_ls, Model_ras, BV_ras, Covariates, Dir_spec){
 					 width = 24, height = 16, units = "cm")
 		
 		## Response curves ----
+		sink(file.path(Dir_spec, "Progress.txt"))
+		print("12 RESPCURVES")
+		sink()
+		
 		Mask_ras <- !is.na(Model_ras$Suitability)
 		Covariates <- mask(Covariates, Model_ras$Suitability)
 		Drivers_df <- as.data.frame(Covariates, xy = TRUE) # turn raster into dataframe
