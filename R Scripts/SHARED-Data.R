@@ -146,9 +146,39 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 		specs_ls <- CapfitogenData
 	}
 	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste0("https://www.gbif.org/species/", tax_ID) # gbif ID
+	JSON_ls$`@graph`[[2]]$creator$`@id` <- c(JSON_ls$`@graph`[[2]]$creator$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$author$`@id` <- c(JSON_ls$`@graph`[[2]]$author$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+	JSON_ls$`@graph`[[2]]$name <- paste("Cleaned GBIF occurrence records for", RankGBIF, species)
+	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", Mode)
+	JSON_ls$`@graph`[[2]]$description <- paste(Mode, "input data for", species)
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[4]]$name <- c(as.character(options("gbif_user")), JSON_ls$`@graph`[[4]]$name)
+	JSON_ls$`@graph`[[4]]$`@id` <- c(JSON_ls$`@graph`[[4]]$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[4]]$`@type` <- c(JSON_ls$`@graph`[[4]]$`@type`, "Organisation")
+	
+	JSON_ls$`@graph`[[5]]$agent$`@id` <- c(JSON_ls$`@graph`[[5]]$agent$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+	
+	con <- file(file.path(Dir, paste0(species, ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	### Returning Object to Disk and Environment ----
 	save_ls <- list(meta = occ_meta,
-									occs = specs_ls)
+									occs = specs_ls,
+									json = JSON_ls)
+	
 	saveObj(save_ls, file = FNAME)
 	unlink(occ_get) # removes .zip file
 	save_ls
@@ -246,9 +276,57 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
 	BV_ras <- mask(BV_ras, BV_mask)
 	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- "https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land"
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time() # tail(file.info(FNAME)$ctime)
+	JSON_ls$`@graph`[[2]]$name <- "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+	JSON_ls$`@graph`[[2]]$keywords <- list("ERA5-Land", "ECMWF", "Bioclimatic Variables", "Soil Moisture")
+	JSON_ls$`@graph`[[2]]$description <- "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://doi.org/10.1088/1748-9326/ac48b3"
+	
+	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	### Saving ----
 	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
 	unlink(file.path(Dir, "Qsoil_BC.nc"))
 	names(BV_ras) <- paste0("BIO", 1:19)
 	BV_ras
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
