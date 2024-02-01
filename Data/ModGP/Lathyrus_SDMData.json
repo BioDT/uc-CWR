@@ -17,22 +17,22 @@
       "@id": ["./"],
       "hasPart": [
         {
-          "@id": ["Lathyrus.RData"]
+          "@id": ["Lathyrus_SDMData.RData"]
         }
       ],
       "about": [
         {
-          "@id": ["https://www.gbif.org/species/10356062"]
+          "@id": ["Presence/Absence data frames for Lathyrus species"]
         }
       ],
       "@type": [
         ["Dataset"]
       ],
       "creator": {
-        "@id": ["https://orcid.org/0000-0002-4984-7646", "biodt-robot@gbif.no"]
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
       },
       "author": {
-        "@id": ["https://orcid.org/0000-0002-4984-7646", "biodt-robot@gbif.no"]
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
       },
       "license": {
         "@id": ["https://creativecommons.org/licenses/by/4.0/"]
@@ -40,8 +40,8 @@
       "studySubject": [
         ["http://eurovoc.europa.eu/632"]
       ],
-      "datePublished": ["2024-02-01 13:01:15"],
-      "name": ["Cleaned GBIF occurrence records for genus Lathyrus"],
+      "datePublished": ["2024-02-01 13:07:19"],
+      "name": ["Presence/Absence data frames for Lathyrus species"],
       "encodingFormat": ["application/ld+json"],
       "mainEntity": ["Dataset"],
       "keywords": [
@@ -49,29 +49,30 @@
         ["Occurrence"],
         ["Biodiversity"],
         ["Observation"],
-        ["ModGP"]
+        ["ModGP"],
+        ["SDM"]
       ],
-      "description": ["ModGP input data for Lathyrus"]
+      "description": ["SDM input data for ModGP"]
     },
     {
-      "@id": ["Lathyrus.RData"],
+      "@id": ["Lathyrus_SDMData.RData"],
       "@type": [
         ["File"]
       ],
-      "name": ["Lathyrus.RData"],
-      "contentSize": [87871525],
+      "name": ["Lathyrus_SDMData.RData"],
+      "contentSize": [319177534],
       "encodingFormat": ["application/RData"]
     },
     {
-      "@id": ["https://orcid.org/0000-0002-4984-7646", "biodt-robot@gbif.no"],
-      "@type": ["Person", "Organisation"],
-      "name": ["biodt-cwr", "Erik Kusch"]
+      "@id": ["https://orcid.org/0000-0002-4984-7646"],
+      "@type": ["Person"],
+      "name": ["Erik Kusch"]
     },
     {
       "@id": ["#action1"],
       "@type": ["CreateAction"],
       "agent": {
-        "@id": ["https://orcid.org/0000-0002-4984-7646", "biodt-robot@gbif.no"]
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
       },
       "instrument": {
         "@id": ["https://github.com/BioDT/uc-CWR"]

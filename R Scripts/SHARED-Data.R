@@ -146,6 +146,16 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 		specs_ls <- CapfitogenData
 	}
 	
+	### Returning Object to Disk and Environment ----
+	save_ls <- list(meta = occ_meta,
+									occs = specs_ls
+									# ,
+									# json = JSON_ls
+									)
+	
+	saveObj(save_ls, file = FNAME)
+	unlink(occ_get) # removes .zip file
+	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
 	
@@ -174,13 +184,6 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
 	
-	### Returning Object to Disk and Environment ----
-	save_ls <- list(meta = occ_meta,
-									occs = specs_ls,
-									json = JSON_ls)
-	
-	saveObj(save_ls, file = FNAME)
-	unlink(occ_get) # removes .zip file
 	save_ls
 }
 
@@ -275,6 +278,11 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	BV_ras <- crop(BV_ras, extent(Land_sp))
 	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
 	BV_ras <- mask(BV_ras, BV_mask)
+
+	### Saving ----
+	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
+	unlink(file.path(Dir, "Qsoil_BC.nc"))
+	names(BV_ras) <- paste0("BIO", 1:19)
 	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
@@ -296,9 +304,5 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
 	
-	### Saving ----
-	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
-	unlink(file.path(Dir, "Qsoil_BC.nc"))
-	names(BV_ras) <- paste0("BIO", 1:19)
 	BV_ras
 }

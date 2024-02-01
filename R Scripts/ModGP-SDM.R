@@ -106,6 +106,28 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
+	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste("Presence/Absence data frames for", strsplit(names(occ_ls)[1], split = " ")[[1]][1], "species")
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+	JSON_ls$`@graph`[[2]]$name <- paste("Presence/Absence data frames for", strsplit(names(occ_ls)[1], split = " ")[[1]][1], "species")
+	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", "ModGP", "SDM")
+	JSON_ls$`@graph`[[2]]$description <- paste("SDM input data for ModGP")
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+	
+	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	return_ls
 }
 
