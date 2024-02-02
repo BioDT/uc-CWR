@@ -92,7 +92,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	### Parallel Set-Up ----
 	if(parallel == 1 | Mode == "Capfitogen"){parallel <- NULL} # no parallelisation
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -124,10 +124,6 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 											 	spec_df$presence <- 1
 											 	st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
 											 })
-	# if(!is.null(parallel)){
-	# 	stopCluster(parallel)
-	# 	closeAllConnections()
-	# }
 	names(specs_ls) <- GBIF_specs
 	
 	## Making list into single data frame when Capfitogen mode is toggled on.
