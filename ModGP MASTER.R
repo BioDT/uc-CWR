@@ -11,7 +11,16 @@
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
 rm(list=ls())
-SPECIES <- "Lathyrus"
+
+# Read species from command-line argument
+args = commandArgs(trailingOnly=TRUE)
+if (length(args)==0) {
+	# Default species
+	SPECIES <- "Lathyrus"
+} else {
+	SPECIES <- args[1]
+}
+message(sprintf("SPECIES = %s", SPECIES))
 
 ## Packages ---------------------------------------------------------------
 install.load.package <- function(x) {
@@ -128,6 +137,7 @@ if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credent
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
 	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
 } # end of Core check
+message(sprintf("numberOfCores = %d", numberOfCores))
 
 ## Sourcing ---------------------------------------------------------------
 source(file.path(Dir.Scripts, "SHARED-Data.R"))

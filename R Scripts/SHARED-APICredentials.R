@@ -1,6 +1,15 @@
 API_User <- 284500
 API_Key <- "4b988f80-d86e-4d02-9eb0-0d5d0a72c6e5"
-numberOfCores <- parallel::detectCores()
+
+# Choose the number of parallel processes
+if (strtoi(Sys.getenv("CWR_ON_LUMI")) == 1) {
+    numberOfCores <- strtoi(Sys.getenv("SLURM_NTASKS"))
+    if (is.na(numberOfCores)) {
+        numberOfCores <- 1
+    }
+} else {
+    numberOfCores <- parallel::detectCores()
+}
 
 options(gbif_user = "biodt-cwr")
 options(gbif_email = "biodt-robot@gbif.no")

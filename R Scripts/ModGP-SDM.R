@@ -32,7 +32,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -99,10 +99,6 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		list(PA = PA_df)
 		
 	})
-	# if(!is.null(parallel)){
-	# 	stopCluster(parallel)
-	# 	closeAllConnections()
-	# }
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
@@ -145,7 +141,7 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -194,11 +190,6 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 														 })
 	useablespec_df <- do.call(rbind, useablespec_ls)
 
-	# if(!is.null(parallel)){
-	# 	stopCluster(parallel)
-	# 	closeAllConnections()
-	# }
-	
 	### Selection and Cutoffs ----
 	Input_ls <- Input_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
 	
@@ -227,7 +218,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -252,7 +243,9 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														if(!is.null(parallel)){
 															inla.setOption(num.threads = 1)
 															on.exit(inla.setOption(num.threads = parallel::detectCores()))
-															}
+														} else if(strtoi(Sys.getenv("CWR_ON_LUMI")) == 1) {
+															inla.setOption(num.threads = strtoi(Sys.getenv("SLURM_CPUS_PER_TASK")))
+														}
 														
 														# LOADING RASTERS INTO MEMORY -------
 														## Loading covariate data
@@ -403,10 +396,6 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														list(Outputs = modelled_ras,
 																 ISDM = intModel)
 													})
-	# if(!is.null(parallel)){
-	# 	stopCluster(parallel)
-	# 	closeAllConnections()
-	# }
 	saveObj(SDMModel_ls, file = FNAME)
 	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
 	setwd(Dir.Base)
