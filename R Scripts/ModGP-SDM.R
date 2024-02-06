@@ -333,8 +333,13 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																						predictionData = pred_spsf), 
 																timeout = 3600*4, # four hour timeout 
 																onTimeout = "silent")
-															
 															end_time <- Sys.time()
+															
+															if(is.null(Model_iSDM)){
+																sink(file.path(Dir_spec, "InlaTimeout.txt"))
+																print(end_time - start_time)
+																sink()
+															}
 															
 															sink(file.path(Dir_spec, "ExecutionDuration.txt"))
 															print(end_time - start_time)
