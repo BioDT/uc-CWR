@@ -58,7 +58,8 @@ package_vec <- c(
 	"cowplot", # grid plotting
 	"ggpmisc", # for table plotting in ggplot environment
 	"gridExtra", # for smooth plot saving in PDF
-	"stringr"
+	"stringr",
+	"R.utils" # for timeout on inla calls
 )
 sapply(package_vec, install.load.package)
 

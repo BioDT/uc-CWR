@@ -326,10 +326,13 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																																inla.mode = 'experimental'))
 															
 															## Execution ----
-															Model_iSDM <- sdmWorkflow(workflow,
-																												predictionDim = c(pred_spsf@grid@cells.dim[1],
-																																					pred_spsf@grid@cells.dim[2]),
-																												predictionData = pred_spsf)
+															Model_iSDM <- R.utils::withTimeout(
+																sdmWorkflow(workflow,
+																						predictionDim = c(pred_spsf@grid@cells.dim[1],
+																															pred_spsf@grid@cells.dim[2]),
+																						predictionData = pred_spsf), 
+																timeout = 3600*4, # four hour timeout 
+																onTimeout = "silent")
 															
 															end_time <- Sys.time()
 															
