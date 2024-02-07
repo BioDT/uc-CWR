@@ -13,6 +13,8 @@
 FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in sf objects
 														BV_ras = NULL, # stack of environmental variables
 														Dir = NULL, # where to save output
+														Occurrences = 40, # how may unique occurrences to have at least for retaining a species
+														Locations = 40, # how may unique locations to have at least for retaining a species
 														Force = FALSE, # whether to force re-running
 														parallel = 1 # an integer, 1 = sequential
 ){
@@ -32,7 +34,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
+	if(!is.null(parallel) && (is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -51,7 +53,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	return_ls <- pblapply(occ_ls, 
 												cl = parallel,
 												FUN = function(SDMData_iter){
-		# SDMData_iter <- occ_ls[[83]]
+		# SDMData_iter <- occ_ls[[1]]
 		Presences_sf <- SDMData_iter["species"]
 		
 		### Initial Environmental NA match Removal ----
@@ -95,10 +97,51 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 			lat <- PA_df$lat <- st_coordinates(PA_sf)[,2]
 			# PA_df <- na.omit(PA_df)
 		}
+		
+		### Creating SDM Input Object ----
+		if(nrow(PA_df) == 0){
+			data_SDM <- NA
+		}else{
+			data_SDM <- sdmData(PRESENCE~.+coords(lon+lat), 
+													train = na.omit(PA_df[
+														, c("lon","lat","PRESENCE", colnames(Predictors))
+													])
+													)
+		}
+		
+		### Unique Locations & Observations ----
+		Occ_df <- PA_df
+		spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
+		Occ_df$modelSpec <- spec_name
+		
+		## identify useable data
+		if(nrow(Occ_df) == 0){
+			useableocc <- 0
+			uniquecells <- 0
+		}else{
+			## load covariates raster in
+			cov <- rast(readAll(BV_ras)[[1]])
+			cov_crs <- st_crs(cov)
+			## assign correct crs
+			Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
+			Occ_sf <- st_transform(Occ_sf, crs = cov_crs)
+			## filter additionally by covariate data
+			valsext <- terra::extract(y = Occ_sf[Occ_sf$PRESENCE == 1, ], x = cov)
+			useableocc <- sum(!is.na(valsext$BIO1))
+			## identify unique cells filled by occurrences
+			uniquecells <- sum(values(rasterize(Occ_sf, cov, field = "PRESENCE"))[,1] == 1, na.rm = TRUE)
+		}
+		
 		### Returning to outside of apply ----
-		list(PA = PA_df)
+		list(PA = PA_df,
+				 SDMData = data_SDM,
+				 Useable = data.frame(locs = useableocc, cells = uniquecells))
 		
 	})
+	
+	### Limitting to useable species ----
+	useablespec_df <- do.call(rbind, lapply(return_ls, "[[", "Useable"))
+	return_ls <- return_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
@@ -127,76 +170,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	return_ls
 }
 
-# SDM SPECIES PRE-SELECTION ------------------------------------------------
-FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absences
-													Occurrences = 40, # how may unique occurrences to have at least for retaining a species
-													Locations = 40, # how may unique locations to have at least for retaining a species
-													BV_ras = BV_ras, # stack of environmental variables
-													parallel = 1 # an integer, 1 = sequential
-){
-	message("Limiting species for which models witll be run by their spread and available data.")
-	Globe_sf <- gisco_get_countries()
-	
-	### Parallel Set-Up ----
-	if(parallel == 1){parallel <- NULL} # no parallelisation
-	
-	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
-		message("Registering cluster for parallel processing")
-		print("Registering cluster")
-		parallel <- parallel::makeCluster(parallel)
-		on.exit(stopCluster(parallel))
-		print("R Objects loading to cluster")
-		parallel::clusterExport(parallel, varlist = c(
-			"package_vec", "install.load.package",
-			"Globe_sf", "BV_ras"
-		), envir = environment())
-		print("R Packages loading on cluster")
-		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
-	}
-	
-	useablespec_ls <- pblapply(Input_ls, 
-														 cl = parallel,
-														 function(SDMModel_Iter){
-														 	
-														 	## Loading covariate data
-														 	cov <- rast(readAll(BV_ras)[[1]])
-														 	cov_crs <- st_crs(cov)
-														 	
-														 	## make df object
-														 	Occ_df <- SDMModel_Iter$PA # SDMInput_ls$`Lathyrus vernus`$PA
-														 	spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
-														 	Occ_df$modelSpec <- spec_name
-														 	# print(spec_name)
-														 	
-														 	## identify useable data
-														 	if(nrow(Occ_df) == 0){
-														 		useableocc <- 0
-														 		uniquecells <- 0
-														 	}else{
-														 		## assign correct crs
-														 		Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
-														 		Occ_sf <- st_transform(Occ_sf, crs = cov_crs)
-														 		## filter by land area of polygon
-														 		Occ_sf <- st_filter(Occ_sf, Globe_sf)
-														 		## filter additionally by covariate data
-														 		valsext <- terra::extract(y = Occ_sf[Occ_sf$PRESENCE == 1, ], x = cov)
-														 		useableocc <- sum(!is.na(valsext$BIO1))
-														 		## identify unique cells filled by occurrences
-														 		uniquecells <- sum(values(rasterize(Occ_sf, cov, field = "PRESENCE"))[,1] == 1, na.rm = TRUE)
-														 	}
-														 	## report back
-														 	data.frame(locs = useableocc, cells = uniquecells)
-														 })
-	useablespec_df <- do.call(rbind, useablespec_ls)
-
-	### Selection and Cutoffs ----
-	Input_ls <- Input_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
-	
-	### Returning Object to Environment ----
-	return(Input_ls)
-}
-
+# SDM EXECUTION & PREDICTION -----------------------------------------------
 FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per species in sf objects
 												BV_ras = NULL, # stack of environmental variables
 												Dir = NULL, # where to save output
@@ -205,6 +179,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 												parallel = 1 # an integer, 1 = sequential
 ){
 	GenName <- strsplit(names(SDMData_ls)[1], split = " ")[[1]][1]
+	Dir.Genus <- file.path(Dir, GenName)
+	if(!dir.exists(Dir.Genus)){dir.create(Dir.Genus)}
 	FNAME <- file.path(Dir, paste0(GenName, "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
@@ -212,6 +188,10 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(SDMModel_ls)
 	}
+	
+	### Loading rasters into memory ----
+	BV_ras <- readAll(BV_ras)
+	Drivers <- readAll(Drivers)
 	
 	### Parallel Set-Up ----
 	if(parallel == 1){parallel <- NULL} # no parallelisation
@@ -225,9 +205,9 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 		print("R Objects loading to cluster")
 		parallel::clusterExport(parallel, varlist = c(
 			"package_vec", "install.load.package",
-			"BV_ras", "Drivers", "KeepModels", "Force", "Dir",
+			"BV_ras", "Drivers", "Dir", "Dir.Genus", 
 			"GenName", "FUN.Viz", "FUN.ShinyPrep", "Plot_BC", "%nin%",
-			"parallel", "Dir.Data.ModGP")
+			"parallel")
 		, envir = environment())
 		print("R Packages loading on cluster")
 		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
@@ -236,167 +216,96 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	SDMModel_ls <- pblapply(SDMData_ls, 
 													cl = parallel,
 													FUN = function(SDMModel_Iter){
-		# SDMModel_Iter <- SDMData_ls[[1]]
+														# SDMModel_Iter <- SDMData_ls[[1]]
 														
-														setwd(Dir)
-														if(!is.null(parallel)){
-															inla.setOption(num.threads = 1)
-															on.exit(inla.setOption(num.threads = parallel::detectCores()))
-														} else if(strtoi(Sys.getenv("CWR_ON_LUMI")) == 1) {
-															inla.setOption(num.threads = strtoi(Sys.getenv("SLURM_CPUS_PER_TASK")))
-														}
+														# SETTING UP PARALLEL EXECUTION ------- 
+														SDMpar <- ifelse(!is.null(parallel), 1, parallel::detectCores())
 														
-														# LOADING RASTERS INTO MEMORY -------
-														## Loading covariate data
-														BV_ras <- readAll(BV_ras)
-														Drivers <- rast(readAll(Drivers))
+														# EXTRACTING DATA FROM LIST -------
+														PA_df <- SDMModel_Iter$PA
+														data_SDM <- SDMModel_Iter$SDMData
+														spec_name <- unique(PA_df$species[PA_df$PRESENCE == 1])
 														
-														# LOADING RASTERS INTO MEMORY -------
-														Occ_df <- SDMModel_Iter$PA
-														spec_name <- unique(Occ_df$species[Occ_df$PRESENCE == 1])
-														Occ_df$modelSpec <- spec_name
-														Dir_spec <- file.path(Dir, GenName, str_replace(spec_name, " ", "_"))
-														if(!dir.exists(Dir_spec)){dir.create(Dir_spec)}
+														# GETTING DIRECTORIES AND NAMES -------
 														# print(spec_name)
-														Occ_sf <- st_as_sf(Occ_df, crs = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0')
-
-														# COVARIATES -------
-														cov <- rast(BV_ras)
-														vars <- colnames(Occ_df)[startsWith(colnames(Occ_df), prefix = "BIO")]
-														cov <- cov[[as.numeric(gsub(".*?([0-9]+).*", "\\1", vars))]]
-														names(cov) <- vars
+														Dir.Species <- file.path(Dir.Genus, strsplit(spec_name, " ")[[1]][2])
+														if(!dir.exists(Dir.Species)){dir.create(Dir.Species)}
+														FNAMEInner <- file.path(Dir.Species, "SDM.RData")
 														
-														Occ_sf <- st_transform(Occ_sf, crs = st_crs(cov))
-
-														if(file.exists(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds")) &
-															 !Force){
-															message(paste("ISDM already compiled for", spec_name, "with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"))
+														# RUNNING ENSEMBLE MODEL -------
+														if(file.exists(FNAMEInner)){
+															return_ls <- loadObj(FNAMEInner)
 														}else{
-															message(paste("Compiling ISDM for", spec_name))
-															start_time <- Sys.time()
+															## executing mdeols
+															model_SDM <- sdm(~., data_SDM, ## discuss settings here!!!
+																							 methods = c("GAM", "RF"), # "maxent","gbm","GAM","RF"
+																							 replications = c("sub", "boot"),
+																							 test.p = 25,
+																							 n = 1, #3
+																							 parallelSetting = list(ncore = SDMPar, method = "parallel"))
+															## building ensemble
+															ensemble_SDM <- ensemble(model_SDM, BV_ras, 
+																											 filename = file.path(Dir.Species, "ensemble"), 
+																											 setting = list(method = "weighted", 
+																											 							 stat = "tss", opt = 2), 
+																											 overwrite = TRUE)
+															## evaluate models
+															eval_SDM <- getEvaluation(model_SDM, stat = c("TSS", "threshold"))
+															## prediction
+															prediction_SDM <- predict(model_SDM, BV_ras, 
+																												filename = file.path(Dir.Species, "prediction"), 
+																												overwrite = TRUE)
+															# this block is needed to load fully into memory
+															ensemble_SDM <- readAll(ensemble_SDM)
+															modelnames <- names(prediction_SDM) # keep names
+															prediction_SDM <- stack(file.path(Dir.Species, "prediction")) # index on drive
+															prediction_SDM <- readAll(prediction_SDM) # load fully from file
+															names(prediction_SDM) <- modelnames # assign names back on
+															binarised_SDM <- prediction_SDM > eval_SDM$threshold ## is this correct!!!
+															proportion_SDM <- sum(binarised_SDM)/nlayers(binarised_SDM)
 															
-															# SDM WORKFLOW -------
-															## Workflow Setup ----
-															### base ----
-															workflow <- startWorkflow(
-																Projection = '+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0',
-																Species = unique(Occ_df$modelSpec),
-																saveOptions = list(projectName =  GenName), Save = TRUE, Quiet = TRUE
-															)
+															## save rasters
+															raster::writeRaster(ensemble_SDM, 
+																									filename = file.path(Dir.Species, "Continuous.nc"), format = "CDF")
+															raster::writeRaster(prediction_SDM, 
+																									filename = file.path(Dir.Species, "MODELS-Continuous.nc"), format = "CDF")
+															raster::writeRaster(binarised_SDM, 
+																									filename = file.path(Dir.Species, "MODELS-Binarised.nc"), format = "CDF")
+															raster::writeRaster(proportion_SDM, 
+																									filename = file.path(Dir.Species, "Proportion.nc"), format = "CDF")
 															
-															### area ----
-															Globe_sf <- gisco_get_countries()
-															workflow$addArea(Object = Globe_sf)
+															## make a list of outputs
+															return_ls <- list(
+																Models = list(
+																	model = model_SDM,
+																	evalalutation = eval_SDM),
+																Prediction = list(
+																	continuous = ensemble_SDM,
+																	proportion = proportion_SDM,
+																	MODELS_continuous = prediction_SDM,
+																	MODELS_binarised = binarised_SDM
+																)
+																)
+															saveObj(return_ls, file = FNAMEInner)
 															
-															### presence/absence ----
-															workflow$addStructured(dataStructured = Occ_sf, datasetType = 'PA',
-																										 responseName = 'PRESENCE',
-																										 speciesName = 'modelSpec',
-																										 coordinateNames = c('lon', 'lat'))
-															# workflow$plot(Species = TRUE)
-															
-															### covariates ----
-															workflow$addCovariates(Object = cov)
-															
-															### mesh ----
-															load(file.path(Dir.Data.ModGP, "GlobalAreaCRS.RData"))
-															workflow$.__enclos_env__$private$Area <- st_transform(workflow$.__enclos_env__$private$Area, crsto)
-															workflow$addMesh(cutoff = 20000,
-																							 max.edge = c(60000, 80000),
-																							 offset= 100000)
-															
-															### priors ----
-															workflow$specifySpatial(prior.range = c(300000, 0.05),
-																											prior.sigma = c(50, 0.2))
-															
-															### cross-validation ----
-															# workflow$crossValidation(Method = 'Loo')
-															
-															### outputs ----
-															workflow$workflowOutput(c("Model", "Predictions"))
-															
-															### prediction data ----
-															pred_spsf <- as(stack(cov), "SpatialPixelsDataFrame")
-															
-															### INLA options ----
-															workflow$modelOptions(INLA = list(control.inla=list(int.strategy = 'eb',
-																																									cmin = 0),
-																																safe = TRUE,
-																																inla.mode = 'experimental'))
-															
-															## Execution ----
-															Model_iSDM <- R.utils::withTimeout(
-																sdmWorkflow(workflow,
-																						predictionDim = c(pred_spsf@grid@cells.dim[1],
-																															pred_spsf@grid@cells.dim[2]),
-																						predictionData = pred_spsf), 
-																timeout = 3600*4, # four hour timeout 
-																onTimeout = "silent")
-															end_time <- Sys.time()
-															
-															if(is.null(Model_iSDM)){
-																sink(file.path(Dir_spec, "InlaTimeout.txt"))
-																print(end_time - start_time)
-																sink()
-															}
-															
-															sink(file.path(Dir_spec, "ExecutionDuration.txt"))
-															print(end_time - start_time)
-															sink()
+															## unlink SDM workflow files
+															unlink(list.files(Dir.Species, pattern = "prediction", full.names = TRUE))
+															unlink(list.files(Dir.Species, pattern = "ensemble", full.names = TRUE))
 														}
 														
-														## Output ----
-														### reading back in ----
-														Predictions <- readRDS(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "Predictions.rds"))
-														intModel <- readRDS(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "intModel.rds"))
-														
-														### output rasters ----
-														#### predicted suitability ----
-														preds <- cbind(
-															Predictions$predictions@coords,
-															Predictions$predictions$mean
-														)
-														colnames(preds) <- c("x", "y", "z")
-														preds <- rasterFromXYZ(as.data.frame(preds)[, c("x", "y", "z")])
-														preds <- rast(preds)
-														suitability_ras <- # exp(
-															preds
-														#) # exp() can produce serious outliers
-														
-														#### binarising suitability
-														Occ_ras <- rasterize(Occ_sf, cov, field = "PRESENCE")
-														RemoveNA <- data.frame(Suit = values(suitability_ras), 
-																									 Knowns = values(Occ_ras))
-														colnames(RemoveNA) <- c("Suitability", "Observation")
-														RemoveNA <- na.omit(RemoveNA)
-														
-														png(file.path(getwd(), GenName, gsub(spec_name, pattern = " ", replacement = "_"), "ROC.png"), width = 16, height = 16, units = "cm", res = 100)
-														ROC <- Epi::ROC(test = RemoveNA$Suitability, stat = RemoveNA$Observation)
-														dev.off()
-														
-														# sensitivity value at maximizing cutoff point (sensitivity + specifcity = MAX)
-														Bin_thresh <- which.max(rowSums(ROC$res[, c("sens", "spec")]))
-														binarised_ras <- suitability_ras > as.numeric(names(Bin_thresh))
-														
-														#### combining model output rasters ----
-														modelled_ras <- c(suitability_ras, binarised_ras)
-														names(modelled_ras) <- c("Suitability", "Predicted Presence/Absence")
-														try(writeCDF(modelled_ras, 
-																				 file.path(Dir_spec, paste0(gsub(spec_name, pattern = " ", replacement = "_"), "-Outputs.nc")),
-																				 overwrite = TRUE
-														)
-														)
-														
-														if(length(list.files(Dir_spec, pattern = "RESPCURV")) == nlyr(Drivers)){
+														if(length(list.files(Dir.Species, pattern = "RESPCURV")) == nlayers(Drivers)){
 															message("Shiny data and plots already produced.")
 														}else{
 															# MAKING SHINY OUTPUTS ----
-															Shiny_ls <- FUN.ShinyPrep(SDMModel_Iter, Dir_spec = Dir_spec)
+															Shiny_ls <- FUN.ShinyPrep(PA = PA_df, Dir_spec = Dir.Species)
 															
 															# MAKING PNGs FOR SHINY AND PRESENTATIONS ----
-															Plots_ls <- FUN.Viz(Shiny_ls, Model_ras = modelled_ras, 
-																									BV_ras, Covariates = Drivers, 
-																									Dir_spec = Dir_spec)
+															Plots_ls <- FUN.Viz(Shiny_ls, 
+																									Model_ras = stack(return_ls$Prediction$continuous,
+																																		return_ls$Prediction$proportion), 
+																									BV_ras, Covariates = Drivers,
+																									CutOff = 0.6,
+																									Dir_spec = Dir.Species)
 														}
 														
 														# JSON RO-CRATE creation ----
@@ -426,11 +335,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														close(con)
 														
 														# REPORTING BACK TO LIST ----
-														list(Outputs = modelled_ras,
-																 ISDM = intModel)
+														return_ls
 													})
 	saveObj(SDMModel_ls, file = FNAME)
-	
-	setwd(Dir.Base)
 	SDMModel_ls
 }

@@ -1,10 +1,13 @@
 #' ####################################################################### #
 #' PROJECT: [BioDT CWR - ModGP] 
 #' CONTENTS: 
-#'  - Purpose of this code document
+#'  - Execution of ModGP pipeline
 #'  DEPENDENCIES:
-#'  - Code documents needed to execute this document
-#'  - Data files
+#'  - R Scripts directory containing:
+#'  	- "ModGP-Outputs.R"
+#'  	- "ModGP-SDM.R"
+#'  	- "SHARED-APICredentials.R" 
+#'  	- "SHARED-Data.R" 
 #' AUTHOR: [Erik Kusch]
 #' ####################################################################### #
 
@@ -30,36 +33,24 @@ install.load.package <- function(x) {
 }
 ### CRAN PACKAGES ----
 package_vec <- c(
-	"iterators", # for icount
-	"terra", # for alternative raster handling
-	"rgbif", # for gbif access
-	"sf", # for spatialfeatures
-	"sp", # for spatialpoints and polygons
-	"rnaturalearth", # for landmask
-	"parallel", # for parallel runs
-	"usdm", # for vifcor
-	"raster", # for spatial object handling
-	"sf", # for spatialfeatures
-	"pbapply", # for parallelised apply functions and estimators
-	"devtools", # for non-CRAN installation
-	"remotes", # for non-CRAN installation
-	"INLA", # for pointedSDMs
-	# "intSDM", # for intSDMs
-	"giscoR", # for shapefiles of Earth
-	"Epi", # for ROC statistic
-	"raster", # for raster objects
-	"stars", # for fast raster operations
-	"png", # for loading pngs back into R
-	"grid", # for making pngs into ggplot object via rastergrob
-	"ggplot2", # for plotting engine
-	"ggpubr", # for t-test comparisons in ggplot
-	"tidyr", # for gather()
-	"viridis", # colour palettes
-	"cowplot", # grid plotting
-	"ggpmisc", # for table plotting in ggplot environment
-	"gridExtra", # for smooth plot saving in PDF
-	"stringr",
-	"R.utils" # for timeout on inla calls
+	'cowplot', # grid plotting
+	'ggplot2', # ggplot machinery
+	'ggpmisc', # table plotting in ggplot environment
+	'ggpubr', # t-test comparison in ggplot
+	'gridExtra', # ggplot saving in PDF
+	'parallel', # parallel runs
+	'pbapply', # parallel runs with estimator bar
+	'raster', # spatial data
+	'remotes', # remote installation
+	'rgbif', # GBIF access
+	'rnaturalearth', # shapefiles
+	'sdm', # SDM machinery
+	'sf', # spatial data
+	'sp', # spatial data
+	'terra', # spatial data
+	'tidyr', # gather()
+	'usdm', # vifcor()
+	'viridis' # colour palette
 )
 sapply(package_vec, install.load.package)
 
@@ -67,18 +58,17 @@ sapply(package_vec, install.load.package)
 if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
 	remotes::install_github("https://github.com/cran/rgdal")
-	devtools::install_github("ErikKusch/KrigR")
+	remotes::install_github("ErikKusch/KrigR")
 }
 library(KrigR)
 
-if("intSDM" %in% rownames(installed.packages()) == FALSE){
-	devtools::install_github("PhilipMostert/PointedSDMs")
-	devtools::install_github("PhilipMostert/intSDM")
+if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+	remotes::install_github("babaknaimi/mraster")
 }
-library(intSDM)
+library(mraster)
 
 ## updating package_vec for handling of parallel environments
-package_vec <- c(package_vec, "KrigR", "intSDM")
+package_vec <- c(package_vec, "KrigR", "mraster")
 
 ## Functionality ----------------------------------------------------------
 `%nin%` <- Negate(`%in%`) # a function for negation of %in% function
@@ -185,16 +175,6 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, # list of occurrence da
 															 )
 
 # ANALYSIS ================================================================
-## SDM Pre-Selection ------------------------------------------------------
-message("SDM species pre-selection")
-SDMInput_ls <- FUN.PreSelect(
-	Input_ls = SDMInput_ls,
-	BV_ras = BV_ras,
-	Occurrences = 40,
-	Locations = 40,
-	parallel = numberOfCores
-)
-
 ## SDM Execution ----------------------------------------------------------
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
