@@ -32,7 +32,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -141,7 +141,7 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -201,12 +201,11 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 												BV_ras = NULL, # stack of environmental variables
 												Dir = NULL, # where to save output
 												Force = FALSE, # whether to force re-running
-												KeepModels = TRUE, # whether to retain the ISDM model objects
 												Drivers = NULL, # which drivers to make PNG response curve plots for
 												parallel = 1 # an integer, 1 = sequential
 ){
 	GenName <- strsplit(names(SDMData_ls)[1], split = " ")[[1]][1]
-	FNAME <- file.path(Dir, GenName, "_SDMData.RData")
+	FNAME <- file.path(Dir, paste0(GenName, "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
 		SDMModel_ls <- loadObj(FNAME)
@@ -218,7 +217,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -400,12 +399,38 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																									Dir_spec = Dir_spec)
 														}
 														
+														# JSON RO-CRATE creation ----
+														JSON_ls <- jsonlite::read_json(file.path(Dir.Base, "ro-crate-metadata.json"))
+														
+														## shiny data 
+														FNAMEShiny <- file.path(Dir_spec, "ShinyData.RData")
+														
+														JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAMEShiny)
+														JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste("Data required for shiny app for", spec_name)
+														
+														JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+														JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", "ModGP", "SDM")
+														JSON_ls$`@graph`[[2]]$name <- paste("ModGP outputs for", spec_name)
+														JSON_ls$`@graph`[[2]]$description <- paste("ModGP Outputs")
+														
+														
+														JSON_ls$`@graph`[[3]]$name <- basename(FNAMEShiny)
+														JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAMEShiny)
+														JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+														JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAMEShiny)
+														
+														JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+														
+														con <- file(file.path(Dir_spec, paste0("ModGP-", spec_name, ".json")))
+														writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+														close(con)
+														
 														# REPORTING BACK TO LIST ----
 														list(Outputs = modelled_ras,
 																 ISDM = intModel)
 													})
 	saveObj(SDMModel_ls, file = FNAME)
-	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
+	
 	setwd(Dir.Base)
 	SDMModel_ls
 }

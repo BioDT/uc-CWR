@@ -171,7 +171,7 @@ message("Retrieving additional covariates")
 PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
 PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
 PH_stack <- stack(PH_nutrient, PH_toxicity)
-PH_stack <- resample(PH_stack, BV_ras)
+PH_stack <- raster::resample(PH_stack, BV_ras[[1]])
 PH_stack <- stack(PH_stack, BV_ras$BIO1, BV_ras$BIO12)
 names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
 
@@ -199,6 +199,8 @@ SDMInput_ls <- FUN.PreSelect(
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
 	SDMData_ls = SDMInput_ls, 
-	BV_ras = BV_ras, Dir = Dir.Exports.ModGP, Force = FALSE, KeepModels = TRUE,
+	BV_ras = BV_ras, 
+	Dir = Dir.Exports.ModGP,
+	Force = FALSE,
 	Drivers = PH_stack,
 	parallel = numberOfCores)
