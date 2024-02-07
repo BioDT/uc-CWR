@@ -69,3 +69,6 @@ X - PersonalSettings.R
 
 # Job output files
 *.out
+
+# Downloaded data
+CAPFITOGEN3/

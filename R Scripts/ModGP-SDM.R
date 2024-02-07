@@ -32,7 +32,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -99,11 +99,31 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 		list(PA = PA_df)
 		
 	})
-	stopCluster(parallel)
-	closeAllConnections()
 	
 	### Returning Object to Disk and Environment ----
 	saveObj(return_ls, file = FNAME)
+	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste("Presence/Absence data frames for", strsplit(names(occ_ls)[1], split = " ")[[1]][1], "species")
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+	JSON_ls$`@graph`[[2]]$name <- paste("Presence/Absence data frames for", strsplit(names(occ_ls)[1], split = " ")[[1]][1], "species")
+	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", "ModGP", "SDM")
+	JSON_ls$`@graph`[[2]]$description <- paste("SDM input data for ModGP")
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+	
+	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	return_ls
 }
 
@@ -121,7 +141,7 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -168,10 +188,8 @@ FUN.PreSelect <- function(Input_ls, # list of sf objects of presences and absenc
 														 	## report back
 														 	data.frame(locs = useableocc, cells = uniquecells)
 														 })
-	stopCluster(parallel)
-	closeAllConnections()
 	useablespec_df <- do.call(rbind, useablespec_ls)
-	
+
 	### Selection and Cutoffs ----
 	Input_ls <- Input_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
 	
@@ -183,12 +201,11 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 												BV_ras = NULL, # stack of environmental variables
 												Dir = NULL, # where to save output
 												Force = FALSE, # whether to force re-running
-												KeepModels = TRUE, # whether to retain the ISDM model objects
 												Drivers = NULL, # which drivers to make PNG response curve plots for
 												parallel = 1 # an integer, 1 = sequential
 ){
 	GenName <- strsplit(names(SDMData_ls)[1], split = " ")[[1]][1]
-	FNAME <- file.path(Dir, GenName, "_SDMData.RData")
+	FNAME <- file.path(Dir, paste0(GenName, "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
 		SDMModel_ls <- loadObj(FNAME)
@@ -200,7 +217,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -222,10 +239,12 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 		# SDMModel_Iter <- SDMData_ls[[1]]
 														
 														setwd(Dir)
-														# if(!is.null(parallel)){
-														# 	inla.setOption(num.threads = 1)
-														# 	on.exit(inla.setOption(num.threads = parallel::detectCores()))
-														# 	}
+														if(!is.null(parallel)){
+															inla.setOption(num.threads = 1)
+															on.exit(inla.setOption(num.threads = parallel::detectCores()))
+														} else if(strtoi(Sys.getenv("CWR_ON_LUMI")) == 1) {
+															inla.setOption(num.threads = strtoi(Sys.getenv("SLURM_CPUS_PER_TASK")))
+														}
 														
 														# LOADING RASTERS INTO MEMORY -------
 														## Loading covariate data
@@ -306,22 +325,25 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																																inla.mode = 'experimental'))
 															
 															## Execution ----
-															Model_iSDM <- sdmWorkflow(workflow,
-																												predictionDim = c(pred_spsf@grid@cells.dim[1],
-																																					pred_spsf@grid@cells.dim[2]),
-																												predictionData = pred_spsf)
-															
+															Model_iSDM <- R.utils::withTimeout(
+																sdmWorkflow(workflow,
+																						predictionDim = c(pred_spsf@grid@cells.dim[1],
+																															pred_spsf@grid@cells.dim[2]),
+																						predictionData = pred_spsf), 
+																timeout = 3600*4, # four hour timeout 
+																onTimeout = "silent")
 															end_time <- Sys.time()
+															
+															if(is.null(Model_iSDM)){
+																sink(file.path(Dir_spec, "InlaTimeout.txt"))
+																print(end_time - start_time)
+																sink()
+															}
 															
 															sink(file.path(Dir_spec, "ExecutionDuration.txt"))
 															print(end_time - start_time)
 															sink()
-															
 														}
-														
-														sink(file.path(Dir_spec, "Progress.txt"))
-														print("6 Reading output back in")
-														sink()
 														
 														## Output ----
 														### reading back in ----
@@ -377,14 +399,38 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																									Dir_spec = Dir_spec)
 														}
 														
+														# JSON RO-CRATE creation ----
+														JSON_ls <- jsonlite::read_json(file.path(Dir.Base, "ro-crate-metadata.json"))
+														
+														## shiny data 
+														FNAMEShiny <- file.path(Dir_spec, "ShinyData.RData")
+														
+														JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAMEShiny)
+														JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste("Data required for shiny app for", spec_name)
+														
+														JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+														JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", "ModGP", "SDM")
+														JSON_ls$`@graph`[[2]]$name <- paste("ModGP outputs for", spec_name)
+														JSON_ls$`@graph`[[2]]$description <- paste("ModGP Outputs")
+														
+														
+														JSON_ls$`@graph`[[3]]$name <- basename(FNAMEShiny)
+														JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAMEShiny)
+														JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+														JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAMEShiny)
+														
+														JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+														
+														con <- file(file.path(Dir_spec, paste0("ModGP-", spec_name, ".json")))
+														writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+														close(con)
+														
 														# REPORTING BACK TO LIST ----
 														list(Outputs = modelled_ras,
 																 ISDM = intModel)
 													})
-	stopCluster(parallel)
-	closeAllConnections()
 	saveObj(SDMModel_ls, file = FNAME)
-	if(!KeepModels){unlink(file.path(Dir, GenName), recursive = TRUE)}
+	
 	setwd(Dir.Base)
 	SDMModel_ls
 }

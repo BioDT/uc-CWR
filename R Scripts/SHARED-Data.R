@@ -92,7 +92,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	### Parallel Set-Up ----
 	if(parallel == 1 | Mode == "Capfitogen"){parallel <- NULL} # no parallelisation
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel)){ # parallelisation
+	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -124,8 +124,6 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 											 	spec_df$presence <- 1
 											 	st_as_sf(spec_df, coords = c("decimalLongitude", "decimalLatitude"))
 											 })
-	stopCluster(parallel)
-	closeAllConnections()
 	names(specs_ls) <- GBIF_specs
 	
 	## Making list into single data frame when Capfitogen mode is toggled on.
@@ -146,9 +144,42 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	
 	### Returning Object to Disk and Environment ----
 	save_ls <- list(meta = occ_meta,
-									occs = specs_ls)
+									occs = specs_ls
+									# ,
+									# json = JSON_ls
+									)
+	
 	saveObj(save_ls, file = FNAME)
 	unlink(occ_get) # removes .zip file
+	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste0("https://www.gbif.org/species/", tax_ID) # gbif ID
+	JSON_ls$`@graph`[[2]]$creator$`@id` <- c(JSON_ls$`@graph`[[2]]$creator$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$author$`@id` <- c(JSON_ls$`@graph`[[2]]$author$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
+	JSON_ls$`@graph`[[2]]$name <- paste("Cleaned GBIF occurrence records for", RankGBIF, species)
+	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", Mode)
+	JSON_ls$`@graph`[[2]]$description <- paste(Mode, "input data for", species)
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[4]]$name <- c(as.character(options("gbif_user")), JSON_ls$`@graph`[[4]]$name)
+	JSON_ls$`@graph`[[4]]$`@id` <- c(JSON_ls$`@graph`[[4]]$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[4]]$`@type` <- c(JSON_ls$`@graph`[[4]]$`@type`, "Organisation")
+	
+	JSON_ls$`@graph`[[5]]$agent$`@id` <- c(JSON_ls$`@graph`[[5]]$agent$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
+	
+	con <- file(file.path(Dir, paste0(species, ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	save_ls
 }
 
@@ -243,10 +274,31 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	BV_ras <- crop(BV_ras, extent(Land_sp))
 	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
 	BV_ras <- mask(BV_ras, BV_mask)
-	
+
 	### Saving ----
 	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
 	unlink(file.path(Dir, "Qsoil_BC.nc"))
 	names(BV_ras) <- paste0("BIO", 1:19)
+	
+	### JSON RO-CRATE creation ----
+	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+	
+	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- "https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land"
+	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time() # tail(file.info(FNAME)$ctime)
+	JSON_ls$`@graph`[[2]]$name <- "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+	JSON_ls$`@graph`[[2]]$keywords <- list("ERA5-Land", "ECMWF", "Bioclimatic Variables", "Soil Moisture")
+	JSON_ls$`@graph`[[2]]$description <- "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+	
+	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+	
+	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://doi.org/10.1088/1748-9326/ac48b3"
+	
+	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
+	close(con)
+	
 	BV_ras
 }

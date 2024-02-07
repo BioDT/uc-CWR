@@ -1,0 +1,64 @@
+{
+  "@context": ["https://w3id.org/ro/crate/1.1/context"],
+  "@graph": [
+    {
+      "@type": "CreativeWork",
+      "@id": "ro-crate-metadata.json",
+      "conformsTo": {
+        "@id": "https://w3id.org/ro/crate/1.1"
+      },
+      "about": {
+        "@id": "./"
+      }
+    },
+    {
+      "@id": "./",
+      "hasPart": [
+        {
+          "@id": "Lathyrus_aphaca-Outputs.nc"
+        }
+      ],
+      "about": [{ "@id": "https://www.gbif.org/species/8301822" }],
+      "@type": ["Dataset"],
+      "creator": { "@id": "https://orcid.org/0000-0002-4984-7646" },
+      "author": { "@id": "https://orcid.org/0000-0002-4984-7646" },
+      "license": {
+        "@id": "https://creativecommons.org/licenses/by/4.0/"
+      },
+      "studySubject": ["http://eurovoc.europa.eu/632"],
+      "datePublished": "2024-01-24 09:35:26.012186+00:00",
+      "name": "Lathyrus aphaca distribution",
+      "encodingFormat": "application/ld+json",
+      "mainEntity": "Dataset",
+      "keywords": ["SDM", "ModGP"],
+      "description": "ModGP output for Lathyrus aphaca"
+    },
+    {
+      "@id": "Lathyrus_aphaca-Outputs.nc",
+      "@type": ["File"],
+      "name": "Lathyrus_aphaca-Outputs.nc",
+      "contentSize": 50020602,
+      "encodingFormat": "application/x-netcdf"
+    },
+    {
+      "@id": "https://orcid.org/0000-0002-4984-7646",
+      "@type": "Person",
+      "name": "Erik Kusch"
+    },
+    {
+      "@id": "#action1",
+      "@type": "CreateAction",
+      "agent": {
+        "@id": "https://orcid.org/0000-0002-4984-7646"
+      },
+      "instrument": {
+        "@id": "https://github.com/uio-mana/CWR-Hackathon/tree/main/ModGP"
+      },
+      "result": [
+        {
+          "@id": "./"
+        }
+      ]
+    }
+  ]
+}

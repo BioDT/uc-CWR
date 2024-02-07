@@ -11,7 +11,16 @@
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
 rm(list=ls())
-SPECIES <- "Lathyrus"
+
+# Read species from command-line argument
+args = commandArgs(trailingOnly=TRUE)
+if (length(args)==0) {
+	# Default species
+	SPECIES <- "Lathyrus"
+} else {
+	SPECIES <- args[1]
+}
+message(sprintf("SPECIES = %s", SPECIES))
 
 ## Packages ---------------------------------------------------------------
 install.load.package <- function(x) {
@@ -49,7 +58,8 @@ package_vec <- c(
 	"cowplot", # grid plotting
 	"ggpmisc", # for table plotting in ggplot environment
 	"gridExtra", # for smooth plot saving in PDF
-	"stringr"
+	"stringr",
+	"R.utils" # for timeout on inla calls
 )
 sapply(package_vec, install.load.package)
 
@@ -112,7 +122,7 @@ CreateDir <- sapply(Dirs, function(x){
 rm(Dirs)
 
 ## API Credentials --------------------------------------------------------
-try(source(file.path(Dir.Scripts, "X - PersonalSettings.R")))
+try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
 if(as.character(options("gbif_user")) == "NULL" ){
 	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
 if(as.character(options("gbif_email")) == "NULL" ){
@@ -128,6 +138,7 @@ if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credent
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
 	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
 } # end of Core check
+message(sprintf("numberOfCores = %d", numberOfCores))
 
 ## Sourcing ---------------------------------------------------------------
 source(file.path(Dir.Scripts, "SHARED-Data.R"))
@@ -160,7 +171,7 @@ message("Retrieving additional covariates")
 PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
 PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
 PH_stack <- stack(PH_nutrient, PH_toxicity)
-PH_stack <- resample(PH_stack, BV_ras)
+PH_stack <- raster::resample(PH_stack, BV_ras[[1]])
 PH_stack <- stack(PH_stack, BV_ras$BIO1, BV_ras$BIO12)
 names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
 
@@ -188,6 +199,8 @@ SDMInput_ls <- FUN.PreSelect(
 message("Executing SDM workflows")
 SDMModel_ls <- FUN.ExecSDM(
 	SDMData_ls = SDMInput_ls, 
-	BV_ras = BV_ras, Dir = Dir.Exports.ModGP, Force = FALSE, KeepModels = TRUE,
+	BV_ras = BV_ras, 
+	Dir = Dir.Exports.ModGP,
+	Force = FALSE,
 	Drivers = PH_stack,
 	parallel = numberOfCores)

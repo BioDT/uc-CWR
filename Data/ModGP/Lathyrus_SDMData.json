@@ -1,0 +1,87 @@
+{
+  "@context": [
+    ["https://w3id.org/ro/crate/1.1/context"]
+  ],
+  "@graph": [
+    {
+      "@type": ["CreativeWork"],
+      "@id": ["ro-crate-metadata.json"],
+      "conformsTo": {
+        "@id": ["https://w3id.org/ro/crate/1.1"]
+      },
+      "about": {
+        "@id": ["./"]
+      }
+    },
+    {
+      "@id": ["./"],
+      "hasPart": [
+        {
+          "@id": ["Lathyrus_SDMData.RData"]
+        }
+      ],
+      "about": [
+        {
+          "@id": ["Presence/Absence data frames for Lathyrus species"]
+        }
+      ],
+      "@type": [
+        ["Dataset"]
+      ],
+      "creator": {
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
+      },
+      "author": {
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
+      },
+      "license": {
+        "@id": ["https://creativecommons.org/licenses/by/4.0/"]
+      },
+      "studySubject": [
+        ["http://eurovoc.europa.eu/632"]
+      ],
+      "datePublished": ["2024-02-01 13:07:19"],
+      "name": ["Presence/Absence data frames for Lathyrus species"],
+      "encodingFormat": ["application/ld+json"],
+      "mainEntity": ["Dataset"],
+      "keywords": [
+        ["GBIF"],
+        ["Occurrence"],
+        ["Biodiversity"],
+        ["Observation"],
+        ["ModGP"],
+        ["SDM"]
+      ],
+      "description": ["SDM input data for ModGP"]
+    },
+    {
+      "@id": ["Lathyrus_SDMData.RData"],
+      "@type": [
+        ["File"]
+      ],
+      "name": ["Lathyrus_SDMData.RData"],
+      "contentSize": [319177534],
+      "encodingFormat": ["application/RData"]
+    },
+    {
+      "@id": ["https://orcid.org/0000-0002-4984-7646"],
+      "@type": ["Person"],
+      "name": ["Erik Kusch"]
+    },
+    {
+      "@id": ["#action1"],
+      "@type": ["CreateAction"],
+      "agent": {
+        "@id": ["https://orcid.org/0000-0002-4984-7646"]
+      },
+      "instrument": {
+        "@id": ["https://github.com/BioDT/uc-CWR"]
+      },
+      "result": [
+        {
+          "@id": ["./"]
+        }
+      ]
+    }
+  ]
+}

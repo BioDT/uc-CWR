@@ -125,10 +125,6 @@ FUN.Viz <- function(Shiny_ls, Model_ras, BV_ras, Covariates, Dir_spec){
 					 width = 24, height = 16, units = "cm")
 		
 		## Response curves ----
-		sink(file.path(Dir_spec, "Progress.txt"))
-		print("12 RESPCURVES")
-		sink()
-		
 		Mask_ras <- !is.na(Model_ras$Suitability)
 		Covariates <- mask(Covariates, Model_ras$Suitability)
 		Drivers_df <- as.data.frame(Covariates, xy = TRUE) # turn raster into dataframe
