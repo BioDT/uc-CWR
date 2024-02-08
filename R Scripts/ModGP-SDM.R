@@ -227,7 +227,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														spec_name <- unique(PA_df$species[PA_df$PRESENCE == 1])
 														
 														# GETTING DIRECTORIES AND NAMES -------
-														# print(spec_name)
+														print(spec_name)
 														Dir.Species <- file.path(Dir.Genus, strsplit(spec_name, " ")[[1]][2])
 														if(!dir.exists(Dir.Species)){dir.create(Dir.Species)}
 														FNAMEInner <- file.path(Dir.Species, "SDM.RData")
@@ -238,11 +238,13 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														}else{
 															## executing mdeols
 															model_SDM <- sdm(~., data_SDM, ## discuss settings here!!!
-																							 methods = c("GAM", "RF"), # "maxent","gbm","GAM","RF"
-																							 replications = c("sub", "boot"),
-																							 test.p = 25,
-																							 n = 1, #3
-																							 parallelSetting = list(ncore = SDMPar, method = "parallel"))
+																							 methods = c("GAM", "RF")
+																							 # , # "maxent","gbm","GAM","RF"
+																							 # replications = c("sub", "boot"),
+																							 # test.p = 25,
+																							 # n = 1, #3
+																							 # parallelSetting = list(ncore = SDMpar, method = "parallel")
+																							 )
 															## building ensemble
 															ensemble_SDM <- ensemble(model_SDM, BV_ras, 
 																											 filename = file.path(Dir.Species, "ensemble"), 
@@ -312,7 +314,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														JSON_ls <- jsonlite::read_json(file.path(Dir.Base, "ro-crate-metadata.json"))
 														
 														## shiny data 
-														FNAMEShiny <- file.path(Dir_spec, "ShinyData.RData")
+														FNAMEShiny <- file.path(Dir.Species, "ShinyData.RData")
 														
 														JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAMEShiny)
 														JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste("Data required for shiny app for", spec_name)
@@ -330,7 +332,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														
 														JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
 														
-														con <- file(file.path(Dir_spec, paste0("ModGP-", spec_name, ".json")))
+														con <- file(file.path(Dir.Species, paste0("ModGP-", spec_name, ".json")))
 														writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 														close(con)
 														
