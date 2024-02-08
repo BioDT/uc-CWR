@@ -238,12 +238,11 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														}else{
 															## executing mdeols
 															model_SDM <- sdm(~., data_SDM, ## discuss settings here!!!
-																							 methods = c("GAM", "RF")
-																							 # , # "maxent","gbm","GAM","RF"
-																							 # replications = c("sub", "boot"),
-																							 # test.p = 25,
-																							 # n = 1, #3
-																							 # parallelSetting = list(ncore = SDMpar, method = "parallel")
+																							 methods = c("maxent","gbm","GAM"),
+																							 replications = c("sub", "boot"),
+																							 test.p = 25,
+																							 n = 2,
+																							 parallelSetting = list(ncore = SDMpar, method = "parallel")
 																							 )
 															## building ensemble
 															ensemble_SDM <- ensemble(model_SDM, BV_ras, 
