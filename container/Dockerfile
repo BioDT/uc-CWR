@@ -226,6 +226,13 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'sdm::installAll() ' && \
+    /conda/bin/conda clean -afy
+
+
+
 # ENTRYPOINT ["bash"]
 
 # Clean files not needed runtime
