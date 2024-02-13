@@ -222,6 +222,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda install -c conda-forge --override-channels \
         r-dismo \
         r-gbm \
+        r-rjava \
         && \
     /conda/bin/conda clean -afy
 
