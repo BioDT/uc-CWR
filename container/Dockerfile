@@ -216,6 +216,15 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
+# Install other conda-available packages
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    conda install -c conda-forge --override-channels \
+        r-dismo \
+        r-gbm \
+        && \
+    /conda/bin/conda clean -afy
+
 # ENTRYPOINT ["bash"]
 
 # Clean files not needed runtime
