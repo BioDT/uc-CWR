@@ -190,6 +190,24 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
+# Install non-conda-available packages
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'install.packages(c( \
+        "mmap", \
+        "sdm" \
+        ))' && \
+    /conda/bin/conda clean -afy
+
+
+
+# Install mraster
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'devtools::install_github("babaknaimi/mraster", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
+
+
 # Install KrigR
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
