@@ -226,12 +226,29 @@ RUN . /conda/etc/profile.d/conda.sh && \
         && \
     /conda/bin/conda clean -afy
 
+# Install other conda-available packages
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    conda install -c conda-forge --override-channels \
+        r-glmnet \
+        r-tree \
+        r-mda \
+        r-plotrix \
+        r-plotmo \
+        r-earth \
+        r-ranger \
+        r-shinybs \
+        r-crosstalk \
+        r-rsnns \
+        r-leaflet \
+        r-leaflet.providers \
+        && \
+    /conda/bin/conda clean -afy
+
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     Rscript -e 'sdm::installAll() ' && \
     /conda/bin/conda clean -afy
-
-
 
 # ENTRYPOINT ["bash"]
 
