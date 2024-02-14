@@ -197,7 +197,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (!is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
+	if(!is.null(parallel) && (is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -218,9 +218,6 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 													FUN = function(SDMModel_Iter){
 														# SDMModel_Iter <- SDMData_ls[[1]]
 														
-														# SETTING UP PARALLEL EXECUTION ------- 
-														SDMpar <- ifelse(!is.null(parallel), 1, parallel::detectCores())
-														
 														# EXTRACTING DATA FROM LIST -------
 														PA_df <- SDMModel_Iter$PA
 														data_SDM <- SDMModel_Iter$SDMData
@@ -236,13 +233,22 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														if(file.exists(FNAMEInner)){
 															return_ls <- loadObj(FNAMEInner)
 														}else{
+															# SETTING UP PARALLEL EXECUTION -------
+															if (is.na(strtoi(Sys.getenv("CWR_ON_LUMI")))) {
+																SDMpar <- ifelse(!is.null(parallel), 1, parallel::detectCores())
+																parallelSetting = list(ncore = SDMpar, method = "parallel")
+															} else {
+																SDMpar <- 1
+																parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
+															}
+
 															## executing mdeols
 															model_SDM <- sdm(~., data_SDM, ## discuss settings here!!!
 																							 methods = c("maxent","gbm","GAM"),
 																							 replications = c("sub", "boot"),
 																							 test.p = 25,
 																							 n = 2,
-																							 parallelSetting = list(ncore = SDMpar, method = "parallel")
+																							 parallelSetting = parallelSetting
 																							 )
 															## building ensemble
 															ensemble_SDM <- ensemble(model_SDM, BV_ras, 
