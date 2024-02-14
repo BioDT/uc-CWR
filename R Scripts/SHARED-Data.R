@@ -92,7 +92,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	### Parallel Set-Up ----
 	if(parallel == 1 | Mode == "Capfitogen"){parallel <- NULL} # no parallelisation
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (strtoi(Sys.getenv("CWR_ON_LUMI")) != 1)){ # parallelisation
+	if(!is.null(parallel) && !RUNNING_ON_LUMI){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
