@@ -34,7 +34,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
+	if(!is.null(parallel) && !RUNNING_ON_LUMI){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -197,7 +197,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 	if(parallel == 1){parallel <- NULL} # no parallelisation
 	
 	### This needs to be commented back in when wanting to run code below directly
-	if(!is.null(parallel) && (is.na(strtoi(Sys.getenv("CWR_ON_LUMI"))))){ # parallelisation
+	if(!is.null(parallel) && !RUNNING_ON_LUMI){ # parallelisation
 		message("Registering cluster for parallel processing")
 		print("Registering cluster")
 		parallel <- parallel::makeCluster(parallel)
@@ -234,12 +234,12 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															return_ls <- loadObj(FNAMEInner)
 														}else{
 															# SETTING UP PARALLEL EXECUTION -------
-															if (is.na(strtoi(Sys.getenv("CWR_ON_LUMI")))) {
+															if (RUNNING_ON_LUMI) {
+																SDMpar <- 1 	# TODO: Forking not working in sdm
+																parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
+															} else {
 																SDMpar <- ifelse(!is.null(parallel), 1, parallel::detectCores())
 																parallelSetting = list(ncore = SDMpar, method = "parallel")
-															} else {
-																SDMpar <- 1
-																parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
 															}
 
 															## executing mdeols
