@@ -67,7 +67,7 @@ if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 }
 library(mraster)
 
-if("maxent" %nin% unlist(getmethodNames())){sdm::installAll()} # install methods for sdm package
+if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
 
 ## updating package_vec for handling of parallel environments
 package_vec <- c(package_vec, "KrigR", "mraster")
