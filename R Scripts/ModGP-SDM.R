@@ -243,13 +243,14 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															}
 
 															## executing mdeols
-															model_SDM <- sdm(~., data_SDM, ## discuss settings here!!!
+															model_SDM <- sdm(~., data_SDM,
 																							 methods = c("maxent","gbm","GAM"),
 																							 replications = c("sub", "boot"),
 																							 test.p = 25,
 																							 n = 2,
 																							 parallelSetting = parallelSetting
 																							 )
+															save(model_SDM, file = file.path(Dir.Species, "SDMModel.RData"))
 															## building ensemble
 															ensemble_SDM <- ensemble(model_SDM, BV_ras, 
 																											 filename = file.path(Dir.Species, "ensemble"), 
@@ -264,7 +265,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																												overwrite = TRUE)
 															# this block is needed to load fully into memory
 															ensemble_SDM <- readAll(ensemble_SDM)
-															modelnames <- names(prediction_SDM) # keep names
+															modelnames <- with(model_SDM@run.info, paste(method, replication, replicationID, sep ="-"))
 															prediction_SDM <- stack(file.path(Dir.Species, "prediction")) # index on drive
 															prediction_SDM <- readAll(prediction_SDM) # load fully from file
 															names(prediction_SDM) <- modelnames # assign names back on
@@ -298,6 +299,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															## unlink SDM workflow files
 															unlink(list.files(Dir.Species, pattern = "prediction", full.names = TRUE))
 															unlink(list.files(Dir.Species, pattern = "ensemble", full.names = TRUE))
+															unlink(list.files(Dir.Species, pattern = "SDMModel", full.names = TRUE))
 														}
 														
 														if(length(list.files(Dir.Species, pattern = "RESPCURV")) == nlayers(Drivers)){
