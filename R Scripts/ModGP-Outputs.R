@@ -10,7 +10,7 @@
 
 # BIOCLIMATIC VARIABLE PLOTTING -------------------------------------------
 Plot_BC <- function(BC_ras, Shp = NULL, Water_Var = "Precipitation", which = "All"){
-	BV_ras <- readAll(BV_ras)
+	BC_ras <- readAll(BC_ras)
 	BC_names <- c("Annual Mean Temperature", "Mean Diurnal Range", "Isothermality", "Temperature Seasonality", "Max Temperature of Warmest Month", "Min Temperature of Coldest Month", "Temperature Annual Range (BIO5-BIO6)", "Mean Temperature of Wettest Quarter", "Mean Temperature of Driest Quarter", "Mean Temperature of Warmest Quarter", "Mean Temperature of Coldest Quarter", paste("Annual", Water_Var), paste(Water_Var, "of Wettest Month"), paste(Water_Var, "of Driest Month"), paste(Water_Var, "Seasonality"), paste(Water_Var, "of Wettest Quarter"), paste(Water_Var, "of Driest Quarter"), paste(Water_Var, "of Warmest Quarter"), paste(Water_Var, "of Coldest Quarter"))
 	BC_names <- paste0("BIO", 1:19, " - ", BC_names)
 	BC_df <- as.data.frame(BC_ras, xy = TRUE) # turn raster into dataframe

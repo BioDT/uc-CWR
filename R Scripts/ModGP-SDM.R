@@ -22,9 +22,9 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], "_SDMData.RData"))
 	
 	if(file.exists(FNAME) & !Force){
-		return_ls <- loadObj(FNAME)
+		SDMData_ls <- loadObj(FNAME)
 		warning("SDM data have already been prepared with these specifications previously. They have been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-		return(return_ls)
+		return(SDMData_ls)
 	}
 	message("Preparing occurrence data for SDM workflow")
 	
@@ -50,7 +50,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	
 	### Preparing Data Species by Species ----
 	message("Figuring out Presences and Absences for each species")
-	return_ls <- pblapply(occ_ls, 
+	SDMData_ls <- pblapply(occ_ls, 
 												cl = parallel,
 												FUN = function(SDMData_iter){
 		# SDMData_iter <- occ_ls[[1]]
@@ -140,11 +140,11 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	})
 	
 	### Limitting to useable species ----
-	useablespec_df <- do.call(rbind, lapply(return_ls, "[[", "Useable"))
-	return_ls <- return_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
+	useablespec_df <- do.call(rbind, lapply(SDMData_ls, "[[", "Useable"))
+	SDMData_ls <- SDMData_ls[which(useablespec_df$locs > Occurrences & useablespec_df$cells > Locations)]
 	
 	### Returning Object to Disk and Environment ----
-	saveObj(return_ls, file = FNAME)
+	saveObj(SDMData_ls, file = FNAME)
 	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
@@ -167,7 +167,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
 	
-	return_ls
+	SDMData_ls
 }
 
 # SDM EXECUTION & PREDICTION -----------------------------------------------
@@ -229,9 +229,15 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														if(!dir.exists(Dir.Species)){dir.create(Dir.Species)}
 														FNAMEInner <- file.path(Dir.Species, "SDM.RData")
 														
+														# CHECK IF ALREADY RUN ------
+														if(file.exists(file.path(Dir.Species, paste0("ModGP-", spec_name, ".json")))){
+															Shiny_ls <- file.path(Dir.Species, "ShinyData.RData")
+															return(Shiny_ls)
+														}
+														
 														# RUNNING ENSEMBLE MODEL -------
 														if(file.exists(FNAMEInner)){
-															return_ls <- loadObj(FNAMEInner)
+															SDMData_ls <- loadObj(FNAMEInner)
 														}else{
 															# SETTING UP PARALLEL EXECUTION -------
 															if (RUNNING_ON_LUMI) {
@@ -283,7 +289,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																									filename = file.path(Dir.Species, "Proportion.nc"), format = "CDF")
 															
 															## make a list of outputs
-															return_ls <- list(
+															SDMData_ls <- list(
 																Models = list(
 																	model = model_SDM,
 																	evalalutation = eval_SDM),
@@ -294,7 +300,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 																	MODELS_binarised = binarised_SDM
 																)
 																)
-															saveObj(return_ls, file = FNAMEInner)
+															saveObj(SDMData_ls, file = FNAMEInner)
 															
 															## unlink SDM workflow files
 															unlink(list.files(Dir.Species, pattern = "prediction", full.names = TRUE))
@@ -310,8 +316,8 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															
 															# MAKING PNGs FOR SHINY AND PRESENTATIONS ----
 															Plots_ls <- FUN.Viz(Shiny_ls, 
-																									Model_ras = stack(return_ls$Prediction$continuous,
-																																		return_ls$Prediction$proportion), 
+																									Model_ras = stack(SDMData_ls$Prediction$continuous,
+																																		SDMData_ls$Prediction$proportion), 
 																									BV_ras, Covariates = Drivers,
 																									CutOff = 0.6,
 																									Dir_spec = Dir.Species)
@@ -344,7 +350,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 														close(con)
 														
 														# REPORTING BACK TO LIST ----
-														return_ls
+														Shiny_ls
 													})
 	saveObj(SDMModel_ls, file = FNAME)
 	SDMModel_ls
