@@ -43,7 +43,6 @@ package_vec <- c(
 	"pbapply", # for parallelised apply functions and estimators
 	"devtools", # for non-CRAN installation
 	"remotes", # for non-CRAN installation
-	"INLA", # for pointedSDMs
 	# "intSDM", # for intSDMs
 	"giscoR", # for shapefiles of Earth
 	"Epi", # for ROC statistic
@@ -64,6 +63,11 @@ package_vec <- c(
 sapply(package_vec, install.load.package)
 
 ### NON-CRAN PACKAGES ----
+if("INLA" %in% rownames(installed.packages()) == FALSE){ # for pointed SDMs
+    install.packages("INLA", repos="https://inla.r-inla-download.org/R/stable", dependencies=TRUE)
+}
+library(INLA)
+
 if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
 	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
 	remotes::install_github("https://github.com/cran/rgdal")
