@@ -26,7 +26,7 @@ message(sprintf("SPECIES = %s", SPECIES))
 install.load.package <- function(x) {
 	if (!require(x, character.only = TRUE))
 		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
+	library(x, character.only = TRUE)
 }
 ### CRAN PACKAGES ----
 package_vec <- c(
