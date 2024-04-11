@@ -126,6 +126,18 @@ if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credent
 	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
 	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
 } # end of CDS API check
+
+# Choose the number of parallel processes
+RUNNING_ON_LUMI <- !is.na(strtoi(Sys.getenv("CWR_ON_LUMI")))
+if (RUNNING_ON_LUMI) {
+	numberOfCores <- strtoi(Sys.getenv("SLURM_NTASKS"))
+	if (is.na(numberOfCores)) {
+		numberOfCores <- 1
+	}
+} else {
+	numberOfCores <- parallel::detectCores()
+}
+
 # NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
 	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
