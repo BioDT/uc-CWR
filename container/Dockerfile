@@ -93,7 +93,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-cowplot \
         r-ggpmisc \
         r-gridExtra \
-        # Packages for capfitogen
+# Packages for capfitogen
         r-sp \
         r-raster \
         r-maptools \
@@ -114,7 +114,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-fpc \
         r-vegan \
         r-adegenet \
-        # Packages for INLA
+# Packages for INLA
         r-locfit \
         r-ash \
         r-multicool \
@@ -151,6 +151,22 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-rgl \
         r-sn \
         r-splancs \
+# Packages for sdm
+        r-dismo \
+        r-gbm \
+        r-rjava \
+        r-glmnet \
+        r-tree \
+        r-mda \
+        r-plotrix \
+        r-plotmo \
+        r-earth \
+        r-ranger \
+        r-shinybs \
+        r-crosstalk \
+        r-rsnns \
+        r-leaflet \
+        r-leaflet.providers \
         && \
     /conda/bin/conda clean -afy
 
@@ -166,6 +182,8 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "giscoR", \
         "tidyterra", \
         "geodata", \
+        "mmap", \
+        "sdm", \
         "usdm" \
         ))' && \
     /conda/bin/conda clean -afy
@@ -190,12 +208,24 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
+# Install mraster
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'devtools::install_github("babaknaimi/mraster", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
+
 # Install KrigR
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
     Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
+    /conda/bin/conda clean -afy
+
+# Install remaining sdm dependencies (should be none)
+RUN . /conda/etc/profile.d/conda.sh && \
+    conda activate /conda/env && \
+    Rscript -e 'sdm::installAll() ' && \
     /conda/bin/conda clean -afy
 
 # ENTRYPOINT ["bash"]
