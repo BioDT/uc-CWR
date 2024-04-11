@@ -62,7 +62,7 @@ Logo/*
 **/.DS_Store
 
 # API credentials
-X - PersonalSettings.R
+**/SHARED-APICredentials.R
 
 # Singularity images
 *.sif
