@@ -11,6 +11,12 @@
 
        sbatch submit_modgp.lumi.sh Lathyrus
 
+## ModGP on LUMI with Hyperqueue
+
+1. Submit calculation job for a desired species (e.g. Lathyrus):
+
+       sbatch submit_modgp_lumi_HQ.sh Lathyrus
+
 
 ## CAPFITOGEN demo
 
