@@ -40,7 +40,7 @@
       "studySubject": [
         ["http://eurovoc.europa.eu/632"]
       ],
-      "datePublished": ["2024-02-01 13:01:15"],
+      "datePublished": ["2024-06-24 13:42:15"],
       "name": ["Cleaned GBIF occurrence records for genus Lathyrus"],
       "encodingFormat": ["application/ld+json"],
       "mainEntity": ["Dataset"],
@@ -59,7 +59,7 @@
         ["File"]
       ],
       "name": ["Lathyrus.RData"],
-      "contentSize": [87871525],
+      "contentSize": [94438495],
       "encodingFormat": ["application/RData"]
     },
     {

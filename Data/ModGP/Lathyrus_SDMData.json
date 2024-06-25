@@ -40,7 +40,7 @@
       "studySubject": [
         ["http://eurovoc.europa.eu/632"]
       ],
-      "datePublished": ["2024-02-07 16:12:01"],
+      "datePublished": ["2024-06-24 14:01:07"],
       "name": ["Presence/Absence data frames for Lathyrus species"],
       "encodingFormat": ["application/ld+json"],
       "mainEntity": ["Dataset"],
@@ -60,7 +60,7 @@
         ["File"]
       ],
       "name": ["Lathyrus_SDMData.RData"],
-      "contentSize": [6558556153],
+      "contentSize": [7266902284],
       "encodingFormat": ["application/RData"]
     },
     {
