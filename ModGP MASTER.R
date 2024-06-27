@@ -138,6 +138,11 @@ if (RUNNING_ON_LUMI) {
 	numberOfCores <- parallel::detectCores()
 }
 
+RUNNING_ON_DESTINE <- !is.na(strtoi(Sys.getenv("CWR_ON_DESTINE")))
+if(RUNNING_ON_DESTINE){
+	numberOfCores <- 1
+}
+
 # NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
 	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
