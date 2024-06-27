@@ -55,6 +55,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 												FUN = function(SDMData_iter){
 		# SDMData_iter <- occ_ls[[1]]
 		Presences_sf <- SDMData_iter["species"]
+		print(unique(SDMData_iter$species))
 		
 		### Initial Environmental NA match Removal ----
 		NAcheck <- raster::extract(BV_ras, st_coordinates(Presences_sf), df = TRUE)
