@@ -241,7 +241,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															SDMData_ls <- loadObj(FNAMEInner)
 														}else{
 															# SETTING UP PARALLEL EXECUTION -------
-															if (RUNNING_ON_LUMI) {
+															if (RUNNING_ON_LUMI | RUNNING_ON_DESTINE) {
 																SDMpar <- 1 	# TODO: Forking not working in sdm
 																parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
 															} else {
