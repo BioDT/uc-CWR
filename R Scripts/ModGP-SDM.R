@@ -208,7 +208,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 			"package_vec", "install.load.package",
 			"BV_ras", "Drivers", "Dir", "Dir.Genus", 
 			"GenName", "FUN.Viz", "FUN.ShinyPrep", "Plot_BC", "%nin%",
-			"parallel")
+			"parallel", "RUNNING_ON_LUMI", "RUNNING_ON_DESTINE")
 		, envir = environment())
 		print("R Packages loading on cluster")
 		clusterpacks <- clusterCall(parallel, function() sapply(package_vec, install.load.package))
