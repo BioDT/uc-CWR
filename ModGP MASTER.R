@@ -140,7 +140,7 @@ if (RUNNING_ON_LUMI) {
 
 RUNNING_ON_DESTINE <- !is.na(strtoi(Sys.getenv("CWR_ON_DESTINE")))
 if(RUNNING_ON_DESTINE){
-	numberOfCores <- 1
+	numberOfCores <- 9
 }
 
 # NUMBER OF CORES
