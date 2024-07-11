@@ -243,7 +243,12 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 															# SETTING UP PARALLEL EXECUTION -------
 															if (RUNNING_ON_LUMI | RUNNING_ON_DESTINE) {
 																SDMpar <- 1 	# TODO: Forking not working in sdm
-																parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
+																if(RUNNING_ON_DESTINE){
+																	parallelSetting = list(ncore = SDMpar, method = "parallel")
+																}else{
+																	parallelSetting = list(ncore = SDMpar, method = "parallel", fork = TRUE)
+																}
+																
 															} else {
 																SDMpar <- ifelse(!is.null(parallel), 1, parallel::detectCores())
 																parallelSetting = list(ncore = SDMpar, method = "parallel")
