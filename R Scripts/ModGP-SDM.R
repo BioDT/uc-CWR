@@ -206,7 +206,7 @@ FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per spec
 		print("R Objects loading to cluster")
 		parallel::clusterExport(parallel, varlist = c(
 			"package_vec", "install.load.package",
-			"BV_ras", "Drivers", "Dir", "Dir.Genus", 
+			"BV_ras", "Drivers", "Dir", "Dir.Genus", "Dir.Base",
 			"GenName", "FUN.Viz", "FUN.ShinyPrep", "Plot_BC", "%nin%",
 			"parallel", "RUNNING_ON_LUMI", "RUNNING_ON_DESTINE", "saveObj", "loadObj")
 		, envir = environment())
