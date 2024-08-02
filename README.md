@@ -5,12 +5,6 @@
 1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus.
 
 
-## ModGP on LUMI
-
-1. Submit calculation job for a desired species (e.g. Lathyrus):
-
-       sbatch submit_modgp.lumi.sh Lathyrus
-
 ## ModGP on LUMI with Hyperqueue
 
 1. Submit calculation job for a desired species (e.g. Lathyrus):
