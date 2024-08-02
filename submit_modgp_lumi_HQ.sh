@@ -22,14 +22,6 @@ export CWR_ON_LUMI=1
 # Run the prep function for the given species
 singularity run --bind $PWD cwr_0.3.0.sif "run_prep.R" "$SPECIES"
 
-module load LUMI/23.09 partition/C
-module load wget
-
-# Download and extract Hyperqueue
-wget https://github.com/It4innovations/hyperqueue/releases/download/v0.18.0/hq-v0.18.07385641ux-x64.tar.gz
-tar -xvf hq-v0.18.0-linux-x64.tar.gz
-rm hq-v0.18.0-linux-x64.tar.gz
-
 # Add hq to path
 export PATH=$PATH:$(pwd)
 
