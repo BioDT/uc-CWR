@@ -15,14 +15,7 @@
 set.seed(42) # making things reproducibly random
 rm(list=ls())
 
-# Read species from command-line argument
-args = commandArgs(trailingOnly=TRUE)
-if (length(args)==0) {
-	# Default species
-	SPECIES <- "Lathyrus"
-} else {
-	SPECIES <- args[1]
-}
+
 message(sprintf("SPECIES = %s", SPECIES))
 
 ## Packages ---------------------------------------------------------------
