@@ -39,7 +39,6 @@ hq server start &
 # Wait until the server has started
 until hq job list &> /dev/null ; do sleep 1 ; done
 
-
 # Start the workers in the background.
 srun --overlap --cpu-bind=none --mpi=none hq worker start \
     --manager slurm \
