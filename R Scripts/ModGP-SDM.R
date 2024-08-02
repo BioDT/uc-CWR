@@ -18,6 +18,18 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 														Force = FALSE, # whether to force re-running
 														parallel = 1 # an integer, 1 = sequential
 ){
+	# Debug: Print the structure of occ_ls
+    print(str(occ_ls))
+
+    # Check if occ_ls is NULL or empty
+    if (is.null(occ_ls) || length(occ_ls) == 0) {
+        stop("occ_ls is either NULL or empty.")
+    }
+
+    # Check if names(occ_ls) are character
+    if (!is.character(names(occ_ls))) {
+        stop("The names of occ_ls are not character strings.")
+    }
 	
 	FNAME <- file.path(Dir, paste0(strsplit(names(occ_ls)[1], split = " ")[[1]][1], "_SDMData.RData"))
 	
@@ -174,7 +186,7 @@ FUN.PrepSDMData <- function(occ_ls = NULL, # list of occurrences per species in 
 FUN.ExecSDM <- function(SDMData_ls = NULL, # list of presences/absences per species in sf objects
 												BV_ras = NULL, # stack of environmental variables
 												Dir = NULL, # where to save output
-												Force = FALSE, # whether to force re-running
+												Force = TRUE, # whether to force re-running
 												Drivers = NULL, # which drivers to make PNG response curve plots for
 												parallel = 1 # an integer, 1 = sequential
 ){

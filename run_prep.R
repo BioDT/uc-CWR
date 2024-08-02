@@ -147,7 +147,7 @@ message(sprintf("numberOfCores = %d", numberOfCores))
 
 ## Sourcing ---------------------------------------------------------------
 source(file.path(Dir.Scripts,"SHARED-Data.R"))
-source(file.path(Dir.Scripts,"ModGP_func.R"))
+source(file.path(Dir.Scripts,"ModGP-SDM.R"))
 source(file.path(Dir.Scripts,"ModGP-Outputs.R"))
 
 # DATA ====================================================================
