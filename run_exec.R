@@ -44,7 +44,7 @@ CreateDir <- sapply(Dirs, function(x){
 rm(Dirs)
 
 # Choose the number of parallel processes
-RUNNING_ON_LUMI <- !is.na(strtoi(Sys.getenv("CWR_ON_LUMI")))
+RUNNING_ON_LUMI <- TRUE
 if (RUNNING_ON_LUMI) {
 	numberOfCores <- 1
 } else {
