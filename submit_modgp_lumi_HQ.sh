@@ -16,9 +16,6 @@
 
 SPECIES="${1:-Lathyrus}"
 
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export CWR_ON_LUMI=1
-
 # Run the prep function for the given species
 singularity run --bind $PWD cwr_0.3.0.sif "run_prep.R" "$SPECIES"
 

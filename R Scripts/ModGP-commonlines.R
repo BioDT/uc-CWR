@@ -68,3 +68,23 @@ loadObj <- function(file.name){
 	close(pb)
 	return(unserialize(data))
 }
+
+## Directories ------------------------------------------------------------
+### Define directories in relation to project directory
+Dir.Data <- file.path(Dir.Base, "Data")
+Dir.Data.ModGP <- file.path(Dir.Data, "ModGP")
+Dir.Data.GBIF <- file.path(Dir.Data, "GBIF")
+Dir.Data.Envir <- file.path(Dir.Data, "Environment")
+Dir.Exports <- file.path(Dir.Base, "Exports")
+Dir.Exports.ModGP <- file.path(Dir.Exports, "ModGP")
+### Create directories which aren't present yet
+Dirs <- grep(ls(), pattern = "Dir.", value = TRUE)
+CreateDir <- sapply(Dirs, function(x){
+	x <- eval(parse(text=x))
+	if(!dir.exists(x)) dir.create(x)})
+rm(Dirs)
+
+## Sourcing ---------------------------------------------------------------
+source(file.path(Dir.Scripts,"SHARED-Data.R"))
+source(file.path(Dir.Scripts,"ModGP-SDM.R"))
+source(file.path(Dir.Scripts,"ModGP-Outputs.R"))
