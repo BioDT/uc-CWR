@@ -16,9 +16,6 @@
 
 SPECIES="${1:-Lathyrus}"
 
-# Run the prep function for the given species
-singularity run --bind $PWD cwr_0.3.0.sif "run_prep.R" "$SPECIES"
-
 # Add hq to path
 export PATH=$PATH:$(pwd)
 
