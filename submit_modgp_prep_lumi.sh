@@ -4,7 +4,7 @@
 #SBATCH --account=project_465000915
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=128
 #SBATCH --time=04:00:00
 #SBATCH --partition=largemem
 ##SBATCH --partition=lumid
@@ -17,4 +17,4 @@
 SPECIES="${1:-Lathyrus}"
 
 # Run the prep function for the given species
-singularity run --bind $PWD cwr_0.3.0.sif "run_prep.R" "$SPECIES"
+singularity run --bind $PWD cwr_0.3.0.sif "ModGP-run_prep.R" "$SPECIES"
