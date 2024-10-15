@@ -122,8 +122,7 @@ if(as.character(options("gbif_email")) == "NULL" ){
 if(as.character(options("gbif_pwd")) == "NULL" ){
 	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
 
-if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
-	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
+if(!exists("API_Key")){ # CDS API check: if CDS API credentials have not been specified elsewhere
 	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
 } # end of CDS API check
 
