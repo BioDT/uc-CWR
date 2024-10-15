@@ -1,4 +1,4 @@
-ARG CONDA_VERSION=py311_23.9.0-0
+ARG CONDA_VERSION=py312_24.7.1-0
 
 #########################################
 # Base
