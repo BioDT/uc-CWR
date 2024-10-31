@@ -9,9 +9,6 @@
 
 1. Install HyperQueue:
 
-
-       module load wget
-
        wget https://github.com/It4innovations/hyperqueue/releases/download/v0.18.0/hq-v0.18.07385641ux-x64.tar.gz
 
        tar -xvf hq-v0.18.0-linux-x64.tar.gz
