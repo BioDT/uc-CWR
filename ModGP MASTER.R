@@ -15,6 +15,8 @@
 set.seed(42) # making things reproducibly random
 rm(list=ls())
 
+SPECIES <- "Lathyrus" # Default species
+
 message(sprintf("SPECIES = %s", SPECIES))
 
 ## Directories ------------------------------------------------------------
