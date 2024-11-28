@@ -5,7 +5,7 @@
 1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus.
 
 
-## ModGP on LUMI with Hyperqueue
+## ModGP on LUMI with Hyperqueue test
 
 1. Install HyperQueue:
 
