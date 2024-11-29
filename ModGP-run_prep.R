@@ -23,7 +23,6 @@ if (length(args)==0) {
 } else {
 	SPECIES <- args[1]
 }
-
 message(sprintf("SPECIES = %s", SPECIES))
 
 ## Directories ------------------------------------------------------------
@@ -35,33 +34,15 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
 try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
-if(as.character(options("gbif_user")) == "NULL" ){
-	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
-if(as.character(options("gbif_email")) == "NULL" ){
-	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
-if(as.character(options("gbif_pwd")) == "NULL" ){
-	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
-
-if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
-	API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
-	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
-} # end of CDS API check
 
 # Choose the number of parallel processes
-RUNNING_ON_LUMI <- FALSE
+RUNNING_ON_LUMI <- TRUE
 
-numberOfCores <- parallel::detectCores()
-
-
-RUNNING_ON_DESTINE <- !is.na(strtoi(Sys.getenv("CWR_ON_DESTINE")))
-if(RUNNING_ON_DESTINE){
-	numberOfCores <- 9
+numberOfCores <- strtoi(Sys.getenv("SLURM_CPUS_PER_TASK"))
+if (is.na(numberOfCores)) {
+	numberOfCores <- 1
 }
 
-# NUMBER OF CORES
-if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
-} # end of Core check
 message(sprintf("numberOfCores = %d", numberOfCores))
 
 # DATA ====================================================================
@@ -103,13 +84,12 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, # list of occurrence da
 															 parallel = numberOfCores # parallelised execution
 															 )
 
-# ANALYSIS ================================================================
-## SDM Execution ----------------------------------------------------------
-message("Executing SDM workflows")
-SDMModel_ls <- FUN.ExecSDM(
-	SDMData_ls = SDMInput_ls, 
-	BV_ras = BV_ras, 
-	Dir = Dir.Exports.ModGP,
-	Force = FALSE,
-	Drivers = PH_stack,
-	parallel = numberOfCores)
+# Extract the list of species names
+species_names <- names(SDMInput_ls)
+
+# Save the species names to a file
+writeLines(species_names, "species_list.txt")
+
+# Save the PH stack
+FNAME <- file.path(Dir.Data.Envir, "PH_stack")
+saveObj(PH_stack, file = FNAME)
