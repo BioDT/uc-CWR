@@ -1,0 +1,1 @@
+This directory contains R scripts to be sourced by master scripts in the repository root (i.e. one level up in the folder structure).
