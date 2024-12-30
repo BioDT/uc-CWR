@@ -190,92 +190,90 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 											 Dir = getwd(), # where to store the data output on disk
 											 Force = FALSE # do not overwrite already present data
 											 ){
-	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
+	FNAME <- file.path(paste0("BV_", T_Start, "-", T_End, ".nc"))
 	
-	if(file.exists(FNAME)){
+	if(!Force & file.exists(FNAME)){
 		BV_ras <- stack(FNAME)
 		names(BV_ras) <- paste0("BIO", 1:19)
 		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
 		return(BV_ras)
 	}
 	
-	Month_seq <- seq(as.Date(paste0(T_Start, "-01-01")), as.Date(paste0(T_End, "-12-31")), by = "month")
-	Month_seq <- strsplit(x = as.character(Month_seq), split = "-")
-	MonthsNeeded <- unlist(lapply(Month_seq, FUN = function(x){
-		paste(x[1:2], collapse = "_")
-	}))
-	
-### Raw soil moisture level data ----
+	### Raw soil moisture level data ----
 	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. These are then summed up and used in the bioclimatic variable computation of KrigR
-	WaterPresent <- list.files(Dir, pattern = "volumetric_soil_water_layer_1")
-	AlreadyPresent <- length(unique(grep(paste(MonthsNeeded,collapse="|"), WaterPresent, value=TRUE)))
-	if(AlreadyPresent != length(Month_seq)){
+	if(!file.exists(
+		file.path(Dir, 
+							paste(tools::file_path_sans_ext(basename(FNAME)), 
+										"volumetric_soil_water_layer_1", "RAW.nc", 
+										sep = "_"))
+	)){
 		#### Downloading ----
-		Qsoil1_ras <- download_ERA(
-			Variable = "volumetric_soil_water_layer_1",
-			DataSet = "era5-land",
-			DateStart = paste0(T_Start, "-01-01"),
-			DateStop = paste0(T_End, "-12-31"),
+		Qsoil1_ras <- CDownloadS(
+			Variable = "volumetric_soil_water_layer_1", # could also be total_precipitation
+			DataSet = "reanalysis-era5-land-monthly-means",
+			Type = "monthly_averaged_reanalysis",
+			DateStart = paste0(T_Start, "-01-01 00:00"),
+			DateStop = paste0(T_End, "-12-31 23:00"),
+			TResolution = "month",
 			Dir = Dir,
+			Extent = ne_countries(type = "countries", scale = "medium")[,1],
 			FileName = "Qsoil1",
-			API_Key = API_Key,
-			SingularDL = TRUE,
-			TimeOut = Inf
+			API_User = API_User,
+			API_Key = API_Key
 		)
 		
-		Qsoil2_ras <- download_ERA(
-			Variable = "volumetric_soil_water_layer_2",
-			DataSet = "era5-land",
-			DateStart = paste0(T_Start, "-01-01"),
-			DateStop = paste0(T_End, "-12-31"),
+		Qsoil2_ras <- CDownloadS(
+			Variable = "volumetric_soil_water_layer_2", # could also be total_precipitation
+			DataSet = "reanalysis-era5-land-monthly-means",
+			Type = "monthly_averaged_reanalysis",
+			DateStart = paste0(T_Start, "-01-01 00:00"),
+			DateStop = paste0(T_End, "-12-31 23:00"),
+			TResolution = "month",
 			Dir = Dir,
+			Extent = ne_countries(type = "countries", scale = "medium")[,1],
 			FileName = "Qsoil2",
-			API_Key = API_Key,
-			SingularDL = TRUE
-		)
+			API_User = API_User,
+			API_Key = API_Key
+		)	
 		
 		#### Combining ----
-		QSoilCombin_ras <- rast(Qsoil1_ras)+rast(Qsoil2_ras)
+		QSoilCombin_ras <- Qsoil1_ras + Qsoil2_ras
 		
 		#### Saving ----
-		for(MonthSave_iter in 1:nlyr(QSoilCombin_ras)){
-			FNAME <- file.path(Dir, paste0("volumetric_soil_water_layer_1-mean-", Month_seq[[MonthSave_iter]][1], "_", Month_seq[[MonthSave_iter]][2], "MonthlyBC.nc"))
-			terra::writeCDF(QSoilCombin_ras[[MonthSave_iter]], filename = FNAME, overwrite = TRUE)
-		}
+		terra::metags(QSoilCombin_ras) <- terra::metags(Qsoil1_ras)
+		QSoilCombin_ras <- KrigR:::Meta.NC(
+			NC = QSoilCombin_ras, 
+			FName = file.path(Dir, 
+												paste(tools::file_path_sans_ext(FNAME), 
+															"volumetric_soil_water_layer_1", "RAW.nc", 
+															sep = "_")),
+			Attrs = terra::metags(QSoilCombin_ras), Write = TRUE,
+			Compression = 9
+		)
 		
 		### Deleting unnecessary files ----
 		unlink(list.files(Dir, pattern = "Qsoil", full.names = TRUE))
 	}
 	
 	### Bioclimatic data ----
-	if(file.exists(file.path(Dir, "Qsoil_BC.nc"))){
-		BV_ras <- stack(file.path(Dir, "Qsoil_BC.nc"))
+	if(file.exists(file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc")))){
+		BV_ras <- stack(file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc")))
 	}else{
 		BV_ras <- BioClim(
-			DataSet = "era5-land",
-			Water_Var = "volumetric_soil_water_layer_1",
-			Y_start = T_Start,
-			Y_end = T_End,
-			Dir = Dir,
-			Keep_Monthly = TRUE,
-			FileName = "Qsoil_BC.nc",
-			API_Key = API_Key,
-			Cores = numberOfCores,
-			TimeOut = Inf,
-			SingularDL = FALSE
+			Temperature_Var = "2m_temperature",
+			Temperature_DataSet = "reanalysis-era5-land",
+			Temperature_Type = NA,
+			Water_Var = "volumetric_soil_water_layer_1", # could also be total_precipitation
+			Water_DataSet = "reanalysis-era5-land-monthly-means",
+			Water_Type = "monthly_averaged_reanalysis",
+			Y_start = T_Start, Y_end = T_End,
+			Extent = ne_countries(type = "countries", scale = "medium")[,1],
+			Dir = Dir, FileName = paste0("BV_", T_Start, "-", T_End, ".nc"), 
+			FileExtension = ".nc", Compression = 9, # file storing
+			API_User = API_User, 
+			API_Key = API_Key
 		)
 	}
-	
-	### Masking ----
-	Land_sp <- ne_countries(type = "countries", scale = "medium")
-	BV_ras <- crop(BV_ras, extent(Land_sp))
-	BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
-	BV_ras <- mask(BV_ras, BV_mask)
-
-	### Saving ----
-	writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
-	unlink(file.path(Dir, "Qsoil_BC.nc"))
-	names(BV_ras) <- paste0("BIO", 1:19)
 	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")

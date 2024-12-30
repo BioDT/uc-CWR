@@ -50,15 +50,14 @@ package_vec <- c(
 	'terra', # spatial data
 	'tidyr', # gather()
 	'usdm', # vifcor()
-	'viridis' # colour palette
+	'viridis', # colour palette
+	'iterators'
 )
 sapply(package_vec, install.load.package)
 
 ### NON-CRAN PACKAGES ----
-if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
-	remotes::install_github("https://github.com/cran/rgdal")
-	remotes::install_github("ErikKusch/KrigR")
+if(packageVersion("KrigR") < "0.9.1"){ # KrigR check
+	devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
 }
 library(KrigR)
 
