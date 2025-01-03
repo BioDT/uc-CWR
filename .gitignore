@@ -70,5 +70,6 @@ Logo/*
 # Job output files
 *.out
 
-# Downloaded data
+# CAPFITOGEN downloads
 CAPFITOGEN3/
+scripts/
