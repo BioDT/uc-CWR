@@ -1,3 +1,28 @@
+# this script starts with a copy of @trossi's 'capfitogen' script and will serve 
+# as notes and tests for scripting. To be deleted when a full capfitogen pipeline
+# is in place.
+#-------------------------------------------------
+#test downloading soil data from harmonized world soil database v2.0
+hwsd_path = file.path(getwd(), "Data", "Environment")
+hwsd_zipfile = paste(hwsd_path, "/HWSD2.zip", sep = "")
+url = "https://s3.eu-west-1.amazonaws.com/data.gaezdev.aws.fao.org/HWSD/HWSD2_RASTER.zip"
+library(httr)
+GET(url, write_disk(hwsd_zipfile))
+## 1 km (30 arc-second) resolution
+unzip(hwsd_zipfile,
+      exdir = paste(hwsd_path, "/soil", sep = ""))
+# test reading BIL file
+testraster <- terra::rast("Data/Environment/soil/HWSD2.bil")
+testraster
+# aggregate to coarser resolution by a factor of 9
+# (bin 9x9 neighbouring pixels into one, and assign the bigger pixel the mean)
+soil30 <- aggregate(testraster, fact = 9, fun = mean)
+soil30
+plot(soil30)
+# a plot is made, but of what? There is only one layer of values, and it's not obvoius to me what those values are...
+
+
+#-------------------------------------------------
 # Main input file (pasaporte):
 #   LathyrusData-ForCapfitogen_27oct2023.txt (by Carrie)
 # Filter only one species for testing:

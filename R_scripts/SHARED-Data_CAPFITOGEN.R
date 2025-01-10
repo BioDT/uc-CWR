@@ -1,17 +1,20 @@
 #' ####################################################################### #
-#' PROJECT: [BioDT CWR] 
+#' PROJECT: [BioDT CWR - CAPFITOGEN] 
 #' CONTENTS: 
 #'  - GBIF Data Download Functionality
 #'  - Bioclimatic Variable Climatology creation for qsoil1 and qsoil2 combined
 #'  - Edaphic data download (HJ: not finished!)
 #'  - Geophycical data download (HJ: not finished!)
 #'  DEPENDENCIES:
-#'  - None
-#' AUTHOR: [Erik Kusch]
+#'  - To do: 
+#' AUTHOR: [Erik Kusch, Heli Juottonen, Eva Lieungh]
+#' Capfitogen credit: Parra-Quijano et al. 2021, 
+#'                    https://repositorio.unal.edu.co/handle/unal/85787
 #' ####################################################################### #
 
-
 # HJ: first sections of script are taken from ModGP, only small modifications
+# EL: how can we avoid code duplication from the MoDGP SHARED-Data script?
+# need to work on this to find a good solution.
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
 # queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object and GBIF download metadata
