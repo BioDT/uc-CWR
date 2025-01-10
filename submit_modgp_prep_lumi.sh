@@ -19,5 +19,5 @@ SPECIES="${1:-Lathyrus}"
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 export CWR_ON_LUMI=1
 
-singularity run --bind $PWD cwr_0.4.1.sif "ModGP MASTER.R" "$SPECIES"
+singularity run --bind $PWD cwr_0.4.2.sif "ModGP MASTER.R" "$SPECIES"
 
