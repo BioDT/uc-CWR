@@ -25,57 +25,6 @@ if (length(args)==0) {
 }
 message(sprintf("SPECIES = %s", SPECIES))
 
-## Packages ---------------------------------------------------------------
-install.load.package <- function(x) {
-	if (!require(x, character.only = TRUE))
-		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
-}
-### CRAN PACKAGES ----
-package_vec <- c(
-	'cowplot', # grid plotting
-	'ggplot2', # ggplot machinery
-	'ggpmisc', # table plotting in ggplot environment
-	'ggpubr', # t-test comparison in ggplot
-	'gridExtra', # ggplot saving in PDF
-	'parallel', # parallel runs
-	'pbapply', # parallel runs with estimator bar
-	'raster', # spatial data
-	'remotes', # remote installation
-	'rgbif', # GBIF access
-	'rnaturalearth', # shapefiles
-	'sdm', # SDM machinery
-	'sf', # spatial data
-	'sp', # spatial data
-	'terra', # spatial data
-	'tidyr', # gather()
-	'usdm', # vifcor()
-	'viridis', # colour palette
-	'iterators'
-)
-sapply(package_vec, install.load.package)
-
-### NON-CRAN PACKAGES ----
-if(packageVersion("KrigR") < "0.9.1"){ # KrigR check
-	devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
-}
-library(KrigR)
-
-if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	remotes::install_github("babaknaimi/mraster")
-}
-library(mraster)
-
-if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
-
-## updating package_vec for handling of parallel environments
-package_vec <- c(package_vec, "KrigR", "mraster")
-
-## Functionality ----------------------------------------------------------
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
-
-message(sprintf("SPECIES = %s", SPECIES))
-
 ## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
@@ -85,32 +34,15 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
 try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
-if(as.character(options("gbif_user")) == "NULL" ){
-	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
-if(as.character(options("gbif_email")) == "NULL" ){
-	options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
-if(as.character(options("gbif_pwd")) == "NULL" ){
-	options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
-
-if(!exists("API_Key")){ # CDS API check: if CDS API credentials have not been specified elsewhere
-	API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
-} # end of CDS API check
 
 # Choose the number of parallel processes
-RUNNING_ON_LUMI <- FALSE
+RUNNING_ON_LUMI <- TRUE
 
-numberOfCores <- parallel::detectCores()
-
-
-RUNNING_ON_DESTINE <- !is.na(strtoi(Sys.getenv("CWR_ON_DESTINE")))
-if(RUNNING_ON_DESTINE){
-	numberOfCores <- 9
+numberOfCores <- strtoi(Sys.getenv("SLURM_CPUS_PER_TASK"))
+if (is.na(numberOfCores)) {
+	numberOfCores <- 1
 }
 
-# NUMBER OF CORES
-if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-	numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
-} # end of Core check
 message(sprintf("numberOfCores = %d", numberOfCores))
 
 # DATA ====================================================================
@@ -152,13 +84,12 @@ SDMInput_ls <- FUN.PrepSDMData(occ_ls = Species_ls$occs, # list of occurrence da
 															 parallel = numberOfCores # parallelised execution
 															 )
 
-# ANALYSIS ================================================================
-## SDM Execution ----------------------------------------------------------
-message("Executing SDM workflows")
-SDMModel_ls <- FUN.ExecSDM(
-	SDMData_ls = SDMInput_ls, 
-	BV_ras = BV_ras, 
-	Dir = Dir.Exports.ModGP,
-	Force = FALSE,
-	Drivers = PH_stack,
-	parallel = numberOfCores)
+# Extract the list of species names
+species_names <- names(SDMInput_ls)
+
+# Save the species names to a file
+writeLines(species_names, "species_list.txt")
+
+# Save the PH stack
+FNAME <- file.path(Dir.Data.Envir, "PH_stack")
+saveObj(PH_stack, file = FNAME)
