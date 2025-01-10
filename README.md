@@ -18,7 +18,8 @@
 
 2. Submit calculation job for a desired species (e.g. Lathyrus):
 
-       sbatch submit_modgp_lumi_HQ.sh Lathyrus
+       sbatch submit_modgp_prep_lumi.sh Lathyrus
+       sbatch submit_modgp_exec_lumi_HQ.sh Lathyrus
 
 
 ## CAPFITOGEN demo
