@@ -190,7 +190,7 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 											 Dir = getwd(), # where to store the data output on disk
 											 Force = FALSE # do not overwrite already present data
 											 ){
-	FNAME <- file.path(paste0("BV_", T_Start, "-", T_End, ".nc"))
+	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
 	
 	if(!Force & file.exists(FNAME)){
 		BV_ras <- stack(FNAME)
