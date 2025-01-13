@@ -25,57 +25,6 @@ if (length(args)==0) {
 }
 message(sprintf("SPECIES = %s", SPECIES))
 
-## Packages ---------------------------------------------------------------
-install.load.package <- function(x) {
-	if (!require(x, character.only = TRUE))
-		install.packages(x, repos='http://cran.us.r-project.org')
-	require(x, character.only = TRUE)
-}
-### CRAN PACKAGES ----
-package_vec <- c(
-	'cowplot', # grid plotting
-	'ggplot2', # ggplot machinery
-	'ggpmisc', # table plotting in ggplot environment
-	'ggpubr', # t-test comparison in ggplot
-	'gridExtra', # ggplot saving in PDF
-	'parallel', # parallel runs
-	'pbapply', # parallel runs with estimator bar
-	'raster', # spatial data
-	'remotes', # remote installation
-	'rgbif', # GBIF access
-	'rnaturalearth', # shapefiles
-	'sdm', # SDM machinery
-	'sf', # spatial data
-	'sp', # spatial data
-	'terra', # spatial data
-	'tidyr', # gather()
-	'usdm', # vifcor()
-	'viridis', # colour palette
-	'iterators'
-)
-sapply(package_vec, install.load.package)
-
-### NON-CRAN PACKAGES ----
-if(packageVersion("KrigR") < "0.9.1"){ # KrigR check
-	devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
-}
-library(KrigR)
-
-if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	remotes::install_github("babaknaimi/mraster")
-}
-library(mraster)
-
-if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
-
-## updating package_vec for handling of parallel environments
-package_vec <- c(package_vec, "KrigR", "mraster")
-
-## Functionality ----------------------------------------------------------
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
-
-message(sprintf("SPECIES = %s", SPECIES))
-
 ## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
