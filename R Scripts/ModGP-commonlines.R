@@ -1,3 +1,7 @@
+## Default flags for runtime environment
+RUNNING_ON_LUMI <- FALSE
+RUNNING_ON_DESTINE <- FALSE
+
 ## Packages ---------------------------------------------------------------
 install.load.package <- function(x) {
 	if (!require(x, character.only = TRUE))

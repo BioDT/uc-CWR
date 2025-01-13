@@ -49,10 +49,7 @@ if(!exists("API_Key")){ # CDS API check: if CDS API credentials have not been sp
 } # end of CDS API check
 
 # Choose the number of parallel processes
-RUNNING_ON_LUMI <- FALSE
-
 numberOfCores <- parallel::detectCores()
-
 
 RUNNING_ON_DESTINE <- !is.na(strtoi(Sys.getenv("CWR_ON_DESTINE")))
 if(RUNNING_ON_DESTINE){
