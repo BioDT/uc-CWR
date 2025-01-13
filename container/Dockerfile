@@ -61,6 +61,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-raster \
         r-rgbif \
         r-rnaturalearth \
+        r-rnaturalearthdata \
         r-ncdf4 \
         r-epi \
         r-png \
