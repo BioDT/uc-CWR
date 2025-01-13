@@ -35,7 +35,7 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 ## API Credentials --------------------------------------------------------
 try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
 if (!exists("API_User")) {
-	API_User <- "none"
+	API_User <- "none@"
 }
 if(as.character(options("gbif_user")) == "NULL" ){
 	options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
