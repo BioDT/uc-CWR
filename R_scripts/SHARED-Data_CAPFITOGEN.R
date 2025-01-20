@@ -18,16 +18,23 @@
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
 # queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object and GBIF download metadata
-FUN.DownGBIF <- function(species = NULL, # species name as character for whose genus data is to be downloaded
-                         Dir = getwd(), # where to store the data
-                         Force = TRUE, # whether the download should be forced despite local data already existing
-                         Mode = "Capfitogen", # which specification to run, either for whole GENUS of supplied species (ModGP), or for species directly (Capfitogen)
-                         parallel = 1 # an integer, 1 = sequential; always defaults to sequential when Mode == "Capfitogen"
+FUN.DownGBIF <- function(
+    ## species name as character for whose genus data is to be downloaded
+    species = NULL, 
+    ## where to store the data
+    Dir = getwd(), 
+    ## whether the download should be forced despite local data already existing
+    Force = TRUE, 
+    ## specify to get whole GENUS of supplied species (ModGP), 
+    ## or only the species (Capfitogen)
+    Mode = "Capfitogen", 
+    ## an integer, 1 = sequential; always defaults to sequential when Mode == "Capfitogen" 
+    parallel = 1 
 ){
   ## Preparing species name identifiers
   input_species <- species
   
-  ## Focussing on Genus-part of the name if Mode is set to ModGP
+  ## Focusing on Genus-part of the name if Mode is set to ModGP
   if(Mode == "ModGP"){
     species <- strsplit(input_species, " ")[[1]][1]
   }
