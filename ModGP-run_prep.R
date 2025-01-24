@@ -34,6 +34,9 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
 try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
+if (!exists("API_User")) {
+	API_User <- "none@"
+}
 
 # Choose the number of parallel processes
 RUNNING_ON_LUMI <- TRUE

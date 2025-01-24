@@ -1,4 +1,4 @@
-ARG CONDA_VERSION=py311_23.9.0-0
+ARG CONDA_VERSION=py312_24.7.1-0
 
 #########################################
 # Base
@@ -61,6 +61,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-raster \
         r-rgbif \
         r-rnaturalearth \
+        r-rnaturalearthdata \
         r-ncdf4 \
         r-epi \
         r-png \
@@ -219,7 +220,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
-    Rscript -e 'devtools::install_github("ErikKusch/KrigR", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="Development", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install remaining sdm dependencies (should be none)
