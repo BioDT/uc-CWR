@@ -9,16 +9,14 @@
 
 1. Install HyperQueue:
 
-       wget https://github.com/It4innovations/hyperqueue/releases/download/v0.18.0/hq-v0.18.07385641ux-x64.tar.gz
-
+       wget https://github.com/It4innovations/hyperqueue/releases/download/v0.18.0/hq-v0.18.0-linux-x64.tar.gz
        tar -xvf hq-v0.18.0-linux-x64.tar.gz
-
-       rm hq-v0.18.0-linux-x64.tar.gz  
-
+       rm hq-v0.18.0-linux-x64.tar.gz
 
 2. Submit calculation job for a desired species (e.g. Lathyrus):
 
-       sbatch submit_modgp_lumi_HQ.sh Lathyrus
+       sbatch submit_modgp_prep_lumi.sh Lathyrus
+       sbatch submit_modgp_exec_lumi_HQ.sh Lathyrus
 
 
 ## CAPFITOGEN demo
