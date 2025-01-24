@@ -38,3 +38,11 @@ sources the following scripts:
 
 	2. creating maps (not ready, requires someone with proper spatial data R skills)
 
+-------------------------------------------
+Eva's additional workflow notes:
+
+- Download CAPFITOGEN.zip from the google drive
+- do not replace the library folder like manual suggests
+- create directory CAPFITOGEN/rdatamaps/global/9x9/
+- Download the scripts for CAPFITOGEN3 tools from http://t.ly/h7FQ, extract to project root
+

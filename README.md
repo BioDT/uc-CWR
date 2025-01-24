@@ -1,8 +1,8 @@
-# uc-CWR
+# use case Crop Wild Relatives (uc-CWR)
 
 ## ModGP on Rstudio
 
-1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus.
+1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus. NB! might take a very long time, and should probably be run on an HPC.
 
 
 ## ModGP on LUMI with Hyperqueue
@@ -13,18 +13,17 @@
        tar -xvf hq-v0.18.0-linux-x64.tar.gz
        rm hq-v0.18.0-linux-x64.tar.gz
 
-2. Submit calculation job for a desired species (e.g. Lathyrus):
+2. Submit calculation job for a desired species/genus (e.g. Lathyrus):
 
        sbatch submit_modgp_prep_lumi.sh Lathyrus
        sbatch submit_modgp_exec_lumi_HQ.sh Lathyrus
 
 
-## CAPFITOGEN demo
+## CAPFITOGEN
 
-See [documentation](https://www.capfitogen.net/en).
+See [CAPFITOGEN's local installation instructions](https://www.capfitogen.net/en/access/capfitogen3-local-mode/) and [user manual](https://www.capfitogen.net/en/access/manuals/).
 
-1. Download `CAPFITOGEN3.zip` from
-   [here](https://drive.google.com/file/d/1EJw-XcC1NRVFS7mwzlg1VpQBpRCdfWRd/view?usp=sharing)
+1. Download [CAPFITOGEN3.zip](https://drive.google.com/file/d/1EJw-XcC1NRVFS7mwzlg1VpQBpRCdfWRd/view?usp=sharing)
    and extract it to the project root.
 
 2. Download `rdatamaps/world/20x20` directory from

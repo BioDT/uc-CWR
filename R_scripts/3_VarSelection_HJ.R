@@ -1,5 +1,6 @@
-
-# variable selection: vifcor approach from ModGP
+#' Variable selection script, copied and modified from CAPFITOGEN
+#' 
+#' to be added: vifcor approach from ModGP
 
 FUN.VarSelection <- function(specdata = Species_ls$occs,
                              varstack = NULL,

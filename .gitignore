@@ -55,6 +55,8 @@ rsconnect/
 *.txt
 *.rds
 !Data/*/GlobalAreaCRS.RData
+**/HWSD2.zip
+/Data/Environment/soil
 
 Logo/*
 
@@ -70,6 +72,7 @@ Logo/*
 # Job output files
 *.out
 
-# Downloaded data
+# CAPFITOGEN downloads
 CAPFITOGEN3/
 hq
+scripts/

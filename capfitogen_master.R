@@ -1,22 +1,27 @@
 #' ####################################################################### #
 #' PROJECT: [BioDT CWR - Capfitogen] 
 #' CONTENTS: 
+#'  - Loading/installing packages
+#'  - Execution of shared data pipeline
+#'    - Species occurrence download from GBIF
+#'    - Environmental data load/download
+#'  - Execution of data formatting for CAPFITOGEN
 #'  - Execution of Capfitogen pipeline
 #'  DEPENDENCIES:
-#'  - R Scripts directory containing:
-#'  	- "ModGP-Outputs.R"
-#'  	- "ModGP-SDM.R"
-#'  	- "SHARED-APICredentials.R" 
-#'  	- "SHARED-Data.R" 
-#' AUTHOR: [Erik Kusch] based on ModGP
-#' Credits for Capfitogen: ???
-#' modified by Heli Juottonen (CSC), comments marked 'HJ'
+#'  - R_Scripts directory containing:
+#'  	- "MoDGP-commonlines.R"
+#'  	- "SHARED-APICredentials.R" -- NB! internal to project members, ask for access
+#'  	- "SHARED-Data_CAPFITOGEN.R"
+#'  	- "SelectVar.R" -- CAPFITOGEN tool
+#'  	- 
+#' AUTHORS: [Erik Kusch, Heli Juottonen, Eva Lieungh]
+#' Capfitogen credit: Parra-Quijano et al. 2021, 
+#'                    https://repositorio.unal.edu.co/handle/unal/85787
 #' ####################################################################### #
-
 
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
-rm(list=ls())
+rm(list=ls()) # clean environment
 
 # Read species from command-line argument
 args = commandArgs(trailingOnly=TRUE)
@@ -29,29 +34,33 @@ if (length(args)==0) {
 message(sprintf("SPECIES = %s", SPECIES))
 
 ## Packages ---------------------------------------------------------------
+# Define function to load and/or install packages
 install.load.package <- function(x) {
   if (!require(x, character.only = TRUE))
     install.packages(x, repos='http://cran.us.r-project.org')
   require(x, character.only = TRUE)
 }
 
-# HJ: to do: remove unneeded packages 
-
+# HJ: to do: remove unneeded packages
+# EL: trying to comment out some now to test if we run into issues
+ # move to commonlines
 ### CRAN PACKAGES ----
 package_vec <- c(
+  #'automap', # automatic interpolation (for KrigR)
   'cowplot', # grid plotting
   'exactextractr', # HJ: added to solve extraction problems
-  'geodata', # HJ: added to get soil data for testing
+  #'geodata', # HJ: added to get soil data for testing
   'ggplot2', # ggplot machinery
   'ggpmisc', # table plotting in ggplot environment
   'ggpubr', # t-test comparison in ggplot
   'gridExtra', # ggplot saving in PDF
+  'ncdf4', # handling NetCDF files
   'parallel', # parallel runs
   'pbapply', # parallel runs with estimator bar
-  'raster', # spatial data
+  #'raster', # spatial data ----------------------- should be replaced by terra
   'remotes', # remote installation
   'rgbif', # GBIF access
-  'rnaturalearth', # shapefiles
+  #'rnaturalearth', # shapefiles
   'sdm', # SDM machinery
   'sf', # spatial data
   'sp', # spatial data
@@ -59,7 +68,6 @@ package_vec <- c(
   'tidyr', # gather()
   'usdm', # vifcor()
   'viridis', # colour palette
-  
   'bit64',
   
   # Capfitogen SelectVar packages 
@@ -70,12 +78,12 @@ package_vec <- c(
   'labdsv',
   'mclust',
   'clustvarsel',
-  'randomForest',
+  #'randomForest', # ---------------- replace with ranger?
+  'ranger',
   
   # Capfitogen ECLmapas packages
   # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
   'modeltools',
-  'lattice',
   'flexmix',
   'fpc',
   'vegan',
@@ -83,71 +91,33 @@ package_vec <- c(
 )
 sapply(package_vec, install.load.package)
 
+# ### NON-CRAN PACKAGES ---- are these necessary for capfitogen?
+# if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+#   Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
+#   remotes::install_github("https://github.com/cran/rgdal") # requires gdal-config!
+#   remotes::install_github("ErikKusch/KrigR")
+# }
+# library(KrigR) # is KrigR necessary for capfitogen? 
+# 
+# if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
+#   remotes::install_github("babaknaimi/mraster")
+# }
+# library(mraster)
+# 
+# if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
+# 
+# # updating package_vec for handling of parallel environments
+# package_vec <- c(package_vec, "KrigR", "mraster")
 
-### NON-CRAN PACKAGES ----
-if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-  Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
-  remotes::install_github("https://github.com/cran/rgdal") # requires gdal-config!
-  remotes::install_github("ErikKusch/KrigR")
-}
-library(KrigR)
-
-if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-  remotes::install_github("babaknaimi/mraster")
-}
-library(mraster)
-
-if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
-
-# updating package_vec for handling of parallel environments
-package_vec <- c(package_vec, "KrigR", "mraster")
-
-## Functionality ----------------------------------------------------------
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
-
-#' Progress bar for data loading
-saveObj <- function(object, file.name){
-  outfile <- file(file.name, "wb")
-  serialize(object, outfile)
-  close(outfile)
-}
-loadObj <- function(file.name){
-  library(foreach)
-  filesize <- file.info(file.name)$size
-  chunksize <- ceiling(filesize / 100)
-  pb <- txtProgressBar(min = 0, max = 100, style=3)
-  infile <- file(file.name, "rb")
-  data <- foreach(it = icount(100), .combine = c) %do% {
-    setTxtProgressBar(pb, it)
-    readBin(infile, "raw", chunksize)
-  }
-  close(infile)
-  close(pb)
-  return(unserialize(data))
-}
-
-## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
-Dir.Scripts <- file.path(Dir.Base, "scripts")
-Dir.Results <- file.path(Dir.Base, "results")
-Dir.SelectVar <- file.path(Dir.Results, "SelectVar")
-Dir.ECLMap <- file.path(Dir.Results, "ECLMap")
-Dir.Data <- file.path(Dir.Base, "Data")
-Dir.Data.Capfitogen <- file.path(Dir.Data, "Capfitogen")
-Dir.Data.GBIF <- file.path(Dir.Data, "GBIF")
-Dir.Data.Envir <- file.path(Dir.Data, "Environment")
-Dir.Exports <- file.path(Dir.Base, "Exports")
-Dir.Exports.Capfitogen <- file.path(Dir.Exports, "Capfitogen")
-### Create directories which aren't present yet
-Dirs <- grep(ls(), pattern = "Dir.", value = TRUE)
-CreateDir <- sapply(Dirs, function(x){
-  x <- eval(parse(text=x))
-  if(!dir.exists(x)) dir.create(x)})
-rm(Dirs)
+Dir.Scripts <- file.path(Dir.Base, "R_Scripts")
+
+## source packages, directories, simple functions (...) 
+source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
-try(source(file.path(Dir.Scripts, "SHARED-APICredentials.R")))
+try(source(file.path(Dir.R_scripts, "SHARED-APICredentials.R")))
 if(as.character(options("gbif_user")) == "NULL" ){
   options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
 if(as.character(options("gbif_email")) == "NULL" ){
@@ -159,34 +129,34 @@ if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credent
   API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
   API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
 } # end of CDS API check
-# NUMBER OF CORES
+
+## NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
   numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
 } # end of Core check
 message(sprintf("numberOfCores = %d", numberOfCores))
 
 ## Sourcing ---------------------------------------------------------------
-source(file.path(Dir.Scripts, "SHARED-Data.R"))
-source(file.path(Dir.Scripts, "VarSelection.R"))
-source(file.path(Dir.Scripts, "ELCMap.R")) #HJ: clustering ready, map part not
+# source(file.path(Dir.R_scripts, "SHARED-Data.R")) # done in commonlines
+# source(file.path(Dir.R_scripts, "ELCMap.R")) #HJ: clustering ready, map part not
 
 # DATA ====================================================================
 ## GBIF Data --------------------------------------------------------------
-
 message("Retrieving GBIF data")
 ## species of interest
 Species_ls <- FUN.DownGBIF(
   species = SPECIES, # which species to pull data for
   Dir = Dir.Data.GBIF, # where to store the data output on disk
-  Force = TRUE, # do not overwrite already present data
+  Force = TRUE, # overwrite (TRUE) already present data or not (FALSE)
   Mode = "Capfitogen", # query download for one species
   parallel = 1 # no speed gain here for parallelising on personal machine
 )
 
-
-
 ## Environmental Data -----------------------------------------------------
-
+#' existing data in "Data/Environment/BV-1985-2015.nc" 
+#' and soil data in .bil under /soil downloaded from Harmonized World
+#' Soil Database version 2.0
+#'
 # HJ: this section is not ready, used ready .nc files for testing instead
 # Three functions: 
 # 1. Bioclimatic data: FUN.DownBV
@@ -208,36 +178,45 @@ Species_ls <- FUN.DownGBIF(
 # )
 # 
 # # Edaphic data
-# 
-# message("Retrieving edaphic data")
-# 
-# #HJ: enter here which edaphic variables chosen?
-# 
+
 # edaph_ras <- FUN.DownEV("soc", "silt", "sand") # TO DO
-#
-#
-#
-# Geophysical data
-
-# message("Retrieving geophysical data")
-
-# HJ: enter here which geophysical variables chosen?
 
 #geophy_ras <- FUN.DownGV( ) # TO DO
 
-
-
-# HJ: part below was used to test scripts with existing .nc files
-# ask Heli for the files if needed
-# reading in existing environmental variable files
-# file format: NetCDF (.nc)
-
-# selecting a set of variables for each data type:
-# bioclimv <- c("tmean_1","vapr_annual","prec_1")
-# edaphv <- c("s_silt","s_sand","s_soilwater_cap")
-# geophysv <- c("alt","aspect")
 # 
-# bioclim_ras <- terra::rast(file.path(Dir.Data.Envir, "bioclim.nc"))
+
+# CAPFITOGEN pipeline =========================================================
+## Parameters -----------------------------------------------------------------
+#' copied and shortened from CAPFITOGEN's "Parameters_SelecVar.R" script.
+
+# ruta <- "C:/CAPFITOGEN3" # replace with other paths
+extent <- pais <- "World"
+pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
+geoqual <- FALSE # ?
+# totalqual<-60 #Only applies if geoqual=TRUE
+distdup <- 1 # distance threshold in km to remove duplicates from same population
+resol1 <- "Celdas 1x1 km aprox (30 arc-seg)" # resolution, change to 9x9
+buffy <- FALSE # buffer zone?
+# tamp <- 1000 #Only applies when buffy=TRUE
+bioclimv <- c("tmean_1","vapr_annual","prec_1") # bioclimatic variables, altered by HJ with existing data
+edaphv <- c("s_silt","s_sand","s_soilwater_cap") #  edaphic variables (defaults from SOILGRIDS)
+geophysv <- c("alt","aspect") # geophysical variables
+latitud <- FALSE #Only applies if ecogeo=TRUE
+#TRUE or FALSE type parameter
+##### Note:This parameter indicates whether the latitude variable (Y) that comes from the DECLATITUDE column of the passport table will be used to make the ecogeographic characterization (as a geophysical variable)
+longitud <- TRUE #Only applies if ecogeo=TRUE
+#TRUE or FALSE type parameter
+##### Note1:This parameter indicates whether the longitude variable (X) that comes from the DECLATITUDE column of the passport table will be used to make the ecogeographic characterization (as a geophysical variable)
+percenRF <- 0.66 # percentage of variables that will be selected by Random Forest 
+percenCorr <- 0.33 # percentage of variables that will be selected by the analysis of bivariate correlations, which is executed after the selection by Random Forest (for example, if you wanted to select 1/3 of the total of variables by bivariate correlations, percenRF would be 0.33
+CorrValue <- 0.5 # correlation threshold value, above (in its positive form) or below (in its negative form) of which it is assumed that there is a correlation between two variables.
+pValue <- 0.05 # significance threshold value for bivariate correlations.
+nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
+ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
+resultados <- Dir.Results # directory to place results
+
+## temp: read variables --------------------------------------------------------
+bioclim_ras <- terra::rast(file.path(Dir.Data.Envir, "bioclim.nc"))
 # bioclim_ras <- terra::project(bioclim_ras, "EPSG:4326")
 # names(bioclim_ras) <- bioclimv
 # geophys_ras <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
@@ -246,12 +225,10 @@ Species_ls <- FUN.DownGBIF(
 # edaph_ras <- terra::rast(file.path(Dir.Data.Envir, "edaph.nc"))
 # names(edaph_ras) <- edaphv
 
-
-## Select variables --------------------------------------------------
-
-#### SelecVar #############################
-
-# run variable selection (script VarSelection.R for each category of environmental variables):
+## Variable selection: SelecVar ------------------------------------------------
+#' run variable selection (script VarSelection.R for each category of environmental variables):
+#' 
+source(file.path(Dir.R_scripts, "VarSelection.R")) # complete HJs version, or implement original CAPFITOGEN solution with some additional code before/after?
 
 message("Selecting variables")
 bioclim_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls, #
@@ -268,12 +245,10 @@ edaph_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls
                                   # buf = 2 # HJ: buffer doesn't work properly with terra, gets stuck?
                                   )
 
-
 #results <- "results/SelectVar"
 
-#### ELCmapas #############################
+## Clustering and map creation: ELCmapas ---------------------------------------
 message("Clustering and creating maps")
-
 
 # inputs to clustering: extracted values after variable selection
 
