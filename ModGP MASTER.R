@@ -28,7 +28,7 @@ message(sprintf("SPECIES = %s", SPECIES))
 ## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
-Dir.Scripts <- file.path(Dir.Base, "R Scripts")
+Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
