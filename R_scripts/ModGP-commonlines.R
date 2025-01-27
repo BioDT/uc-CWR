@@ -8,27 +8,55 @@ install.load.package <- function(x) {
 		install.packages(x, repos='http://cran.us.r-project.org')
 	require(x, character.only = TRUE)
 }
+
+# HJ: to do: remove unneeded packages
+# EL: trying to comment out some now to test if we run into issues
+
 ### CRAN PACKAGES ----
 package_vec <- c(
-	'cowplot', # grid plotting
-	'ggplot2', # ggplot machinery
-	'ggpmisc', # table plotting in ggplot environment
-	'ggpubr', # t-test comparison in ggplot
-	'gridExtra', # ggplot saving in PDF
-	'parallel', # parallel runs
-	'pbapply', # parallel runs with estimator bar
-	'raster', # spatial data
-	'remotes', # remote installation
-	'rgbif', # GBIF access
-	'rnaturalearth', # shapefiles
-	'sdm', # SDM machinery
-	'sf', # spatial data
-	'sp', # spatial data
-	'terra', # spatial data
-	'tidyr', # gather()
-	'usdm', # vifcor()
-	'viridis', # colour palette
-	'iterators'
+  'automap', # automatic interpolation (for KrigR)
+  'cowplot', # grid plotting
+  'exactextractr', # HJ: added to solve extraction problems
+  #'geodata', # HJ: added to get soil data for testing
+  'ggplot2', # ggplot machinery
+  'ggpmisc', # table plotting in ggplot environment
+  'ggpubr', # t-test comparison in ggplot
+  'gridExtra', # ggplot saving in PDF
+  'ncdf4', # handling NetCDF files
+  'parallel', # parallel runs
+  'pbapply', # parallel runs with estimator bar
+  'raster', # spatial data ----------------------- should be replaced by terra
+  'remotes', # remote installation
+  'rgbif', # GBIF access
+  'rnaturalearth', # shapefiles
+  'sdm', # SDM machinery
+  'sf', # spatial data
+  'sp', # spatial data
+  'terra', # spatial data
+  'tidyr', # gather()
+  'usdm', # vifcor()
+  'viridis', # colour palette
+  'bit64',
+  'iterators',
+  
+  # Capfitogen SelectVar packages 
+  # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
+  'dismo',
+  'cluster',
+  'ade4',
+  'labdsv',
+  'mclust',
+  'clustvarsel',
+  #'randomForest', # ---------------- replace with ranger?
+  'ranger',
+  
+  # Capfitogen ECLmapas packages
+  # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
+  'modeltools',
+  'flexmix',
+  'fpc',
+  'vegan',
+  'adegenet' #find.clusters ELCmap.R
 )
 sapply(package_vec, install.load.package)
 
@@ -92,8 +120,3 @@ CreateDir <- sapply(Dirs, function(x){
 	x <- eval(parse(text=x))
 	if(!dir.exists(x)) dir.create(x)})
 rm(Dirs)
-
-## Sourcing ---------------------------------------------------------------
-source(file.path(Dir.Scripts,"SHARED-Data.R"))
-source(file.path(Dir.Scripts,"ModGP-SDM.R"))
-source(file.path(Dir.Scripts,"ModGP-Outputs.R"))
