@@ -16,4 +16,7 @@
 
 SPECIES="${1:-Lathyrus}"
 
+# Workaround for memory issues in terra
+export R_TERRA_MAX_RAM_MB=$((100 * 1024))
+
 singularity run --bind $PWD cwr_0.4.4.sif "ModGP-run_prep.R" "$SPECIES"
