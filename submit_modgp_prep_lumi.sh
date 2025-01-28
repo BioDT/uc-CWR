@@ -17,6 +17,13 @@
 SPECIES="${1:-Lathyrus}"
 
 # Workaround for memory issues in terra
-export R_TERRA_MAX_RAM_MB=$((100 * 1024))
+# Max memory for terra
+R_TERRA_MAX_RAM_MB=$((100 * 1024))
+# Limit max memory further if available memory is less than above
+if [[ ${SLURM_MEM_PER_NODE:-0} > 0 ]]; then
+    R_TERRA_MAX_RAM_MB=$(( $R_TERRA_MAX_RAM_MB < $SLURM_MEM_PER_NODE ? $R_TERRA_MAX_RAM_MB : $SLURM_MEM_PER_NODE ))
+fi
+export R_TERRA_MAX_RAM_MB
+# End of workaround
 
 singularity run --bind $PWD cwr_0.4.4.sif "ModGP-run_prep.R" "$SPECIES"
