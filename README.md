@@ -13,7 +13,11 @@
        tar -xvf hq-v0.18.0-linux-x64.tar.gz
        rm hq-v0.18.0-linux-x64.tar.gz
 
-2. Submit calculation job for a desired species (e.g. Lathyrus):
+2. Fetch the container:
+
+       singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.4.4
+
+3. Submit calculation job for a desired species (e.g. Lathyrus):
 
        sbatch submit_modgp_prep_lumi.sh Lathyrus
        sbatch submit_modgp_exec_lumi_HQ.sh Lathyrus
