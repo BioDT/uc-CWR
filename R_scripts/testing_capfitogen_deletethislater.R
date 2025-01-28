@@ -12,14 +12,22 @@ GET(url, write_disk(hwsd_zipfile))
 unzip(hwsd_zipfile,
       exdir = paste(hwsd_path, "/soil", sep = ""))
 # test reading BIL file
-testraster <- terra::rast("Data/Environment/soil/HWSD2.bil")
-testraster
+hwsd_raster <- terra::rast("Data/Environment/soil/HWSD2.bil")
+hwsd_raster
+print(hwsd_raster)
+plot(hwsd_raster)
+summary(hwsd_raster)
+proj4string(hwsd_raster)
+res(hswd_raster)
 # aggregate to coarser resolution by a factor of 9
 # (bin 9x9 neighbouring pixels into one, and assign the bigger pixel the mean)
-soil30 <- aggregate(testraster, fact = 9, fun = mean)
+soil30 <- aggregate(hwsd_raster, fact = 9, fun = mean)
 soil30
 plot(soil30)
 # a plot is made, but of what? There is only one layer of values, and it's not obvoius to me what those values are...
+
+
+# test downloading CAPFITOGEN scripts into R_Scripts
 
 
 #-------------------------------------------------

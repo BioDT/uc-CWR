@@ -14,7 +14,7 @@
 
 # HJ: first sections of script are taken from ModGP, only small modifications
 # EL: how can we avoid code duplication from the MoDGP SHARED-Data script?
-# need to work on this to find a good solution.
+# need to work on this to find a good solution.Because the code here mostly just defines functions but does not run them, I think its OK to merge with the main SHARED-Data.R instead of duplicating. 
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
 # queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object and GBIF download metadata
@@ -343,7 +343,7 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 
 FUN.DownEV <- function(arg1, arg2, arg3){
 
-  FNAME <- file.path(Dir.Data.Envir, "edaph.nc")
+  FNAME <- file.path(Dir.Data.Envir, "edaphic_data.nc")
   
   evarg <- c(arg1, arg2, arg3)
   # evargs <- commandArgs(trailingOnly = TRUE)

@@ -56,7 +56,7 @@ rsconnect/
 *.rds
 !Data/*/GlobalAreaCRS.RData
 **/HWSD2.zip
-/Data/Environment/soil
+/Data/Environment/
 
 Logo/*
 

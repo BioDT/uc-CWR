@@ -33,85 +33,9 @@ if (length(args)==0) {
 }
 message(sprintf("SPECIES = %s", SPECIES))
 
-## Packages ---------------------------------------------------------------
-# Define function to load and/or install packages
-install.load.package <- function(x) {
-  if (!require(x, character.only = TRUE))
-    install.packages(x, repos='http://cran.us.r-project.org')
-  require(x, character.only = TRUE)
-}
-
-# HJ: to do: remove unneeded packages
-# EL: trying to comment out some now to test if we run into issues
- # move to commonlines
-### CRAN PACKAGES ----
-package_vec <- c(
-  #'automap', # automatic interpolation (for KrigR)
-  'cowplot', # grid plotting
-  'exactextractr', # HJ: added to solve extraction problems
-  #'geodata', # HJ: added to get soil data for testing
-  'ggplot2', # ggplot machinery
-  'ggpmisc', # table plotting in ggplot environment
-  'ggpubr', # t-test comparison in ggplot
-  'gridExtra', # ggplot saving in PDF
-  'ncdf4', # handling NetCDF files
-  'parallel', # parallel runs
-  'pbapply', # parallel runs with estimator bar
-  #'raster', # spatial data ----------------------- should be replaced by terra
-  'remotes', # remote installation
-  'rgbif', # GBIF access
-  #'rnaturalearth', # shapefiles
-  'sdm', # SDM machinery
-  'sf', # spatial data
-  'sp', # spatial data
-  'terra', # spatial data
-  'tidyr', # gather()
-  'usdm', # vifcor()
-  'viridis', # colour palette
-  'bit64',
-  
-  # Capfitogen SelectVar packages 
-  # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
-  'dismo',
-  'cluster',
-  'ade4',
-  'labdsv',
-  'mclust',
-  'clustvarsel',
-  #'randomForest', # ---------------- replace with ranger?
-  'ranger',
-  
-  # Capfitogen ECLmapas packages
-  # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
-  'modeltools',
-  'flexmix',
-  'fpc',
-  'vegan',
-  'adegenet' #find.clusters ELCmap.R
-)
-sapply(package_vec, install.load.package)
-
-# ### NON-CRAN PACKAGES ---- are these necessary for capfitogen?
-# if("KrigR" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-#   Sys.setenv(R_REMOTES_NO_ERRORS_FROM_WARNINGS="true")
-#   remotes::install_github("https://github.com/cran/rgdal") # requires gdal-config!
-#   remotes::install_github("ErikKusch/KrigR")
-# }
-# library(KrigR) # is KrigR necessary for capfitogen? 
-# 
-# if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-#   remotes::install_github("babaknaimi/mraster")
-# }
-# library(mraster)
-# 
-# if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
-# 
-# # updating package_vec for handling of parallel environments
-# package_vec <- c(package_vec, "KrigR", "mraster")
-
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
-Dir.Scripts <- file.path(Dir.Base, "R_Scripts")
+Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 
 ## source packages, directories, simple functions (...) 
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
@@ -136,23 +60,38 @@ if(!exists("numberOfCores")){ # Core check: if number of cores for parallel proc
 } # end of Core check
 message(sprintf("numberOfCores = %d", numberOfCores))
 
-## Sourcing ---------------------------------------------------------------
-# source(file.path(Dir.R_scripts, "SHARED-Data.R")) # done in commonlines
-# source(file.path(Dir.R_scripts, "ELCMap.R")) #HJ: clustering ready, map part not
-
 # DATA ====================================================================
+## Run SHARED-Data script -------------------------------------------------
+## defines FUN.DownGBIF(), FUN.DownBV()
+source(file.path(Dir.R_scripts, "SHARED-Data.R"))
+
 ## GBIF Data --------------------------------------------------------------
 message("Retrieving GBIF data")
 ## species of interest
 Species_ls <- FUN.DownGBIF(
   species = SPECIES, # which species to pull data for
   Dir = Dir.Data.GBIF, # where to store the data output on disk
-  Force = TRUE, # overwrite (TRUE) already present data or not (FALSE)
+  Force = FALSE, # overwrite (TRUE) already present data or not (FALSE)
   Mode = "Capfitogen", # query download for one species
   parallel = 1 # no speed gain here for parallelising on personal machine
 )
 
 ## Environmental Data -----------------------------------------------------
+## Bioclomatic data: 19 BioClim variables
+message("Retrieving bioclimatic variables") # NB! slow
+bioclim_data <- FUN.DownBV(
+  T_Start = 1995, # what year to begin climatology calculation in
+  T_End = 2015, # what year to end climatology calculation in
+  Dir = Dir.Data.Envir, # where to store the data output on disk
+  Force = FALSE # do not overwrite already present data
+  )
+
+## Edaphic data: 
+edaphic_data <- FUN.DownEV(
+  Dir = Dir.Data.Envir,
+  Force = FALSE
+)
+
 #' existing data in "Data/Environment/BV-1985-2015.nc" 
 #' and soil data in .bil under /soil downloaded from Harmonized World
 #' Soil Database version 2.0
@@ -183,12 +122,47 @@ Species_ls <- FUN.DownGBIF(
 
 #geophy_ras <- FUN.DownGV( ) # TO DO
 
+## read variables --------------------------------------------------------
+bioclim_ras <- terra::rast(file.path(Dir.Data.Envir, 
+                                     "BV_1985-2015.nc"))
+bioclim_ras <- terra::project(bioclim_ras, 
+                              "EPSG:4326") # WGS84; World Geodetic System 1984
+BioClim_names <- c( ## BioClim variable names, see https://www.worldclim.org/data/bioclim.html
+  "BIO1_Annual_Mean_Temperature",
+  "BIO2_Mean_Diurnal_Range",
+  "BIO3_Isothermality",
+  "BIO4_Temperature_Seasonality",
+  "BIO5_Max_Temperature_of_Warmest_Month",
+  "BIO6_Min_Temperature_of_Coldest_Month",
+  "BIO7_Temperature_Annual_Range",
+  "BIO8_Mean_Temperature_of_Wettest_Quarter",
+  "BIO9_Mean_Temperature_of_Driest_Quarter",
+  "BIO10_Mean_Temperature_of_Warmest_Quarter",
+  "BIO11_Mean_Temperature_of_Coldest_Quarter",
+  "BIO12_Annual_Precipitation",
+  "BIO13_Precipitation_of_Wettest_Month",
+  "BIO14_Precipitation_of_Driest_Month",
+  "BIO15_Precipitation_Seasonality",
+  "BIO16_Precipitation_of_Wettest_Quarter",
+  "BIO17_Precipitation_of_Driest_Quarter",
+  "BIO18_Precipitation_of_Warmest_Quarter",
+  "BIO19_Precipitation_of_Coldest_Quarter")
+names(bioclim_ras) <- BioClim_names
+
+
+geophys_ras <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
+
+# geophys_ras <- terra::project(geophys_ras, "EPSG:4326")
+# names(geophys_ras) <- geophysv
+# edaph_ras <- terra::rast(file.path(Dir.Data.Envir, "edaph.nc"))
+# names(edaph_ras) <- edaphv
+
+
 # 
 
 # CAPFITOGEN pipeline =========================================================
 ## Parameters -----------------------------------------------------------------
-#' copied and shortened from CAPFITOGEN's "Parameters_SelecVar.R" script.
-
+## copied and shortened from CAPFITOGEN's "Parameters_SelecVar.R" script.
 # ruta <- "C:/CAPFITOGEN3" # replace with other paths
 extent <- pais <- "World"
 pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
@@ -198,15 +172,11 @@ distdup <- 1 # distance threshold in km to remove duplicates from same populatio
 resol1 <- "Celdas 1x1 km aprox (30 arc-seg)" # resolution, change to 9x9
 buffy <- FALSE # buffer zone?
 # tamp <- 1000 #Only applies when buffy=TRUE
-bioclimv <- c("tmean_1","vapr_annual","prec_1") # bioclimatic variables, altered by HJ with existing data
+bioclimv <- BioClim_names #c("tmean_1","vapr_annual","prec_1") # bioclimatic variables, altered by HJ with existing data
 edaphv <- c("s_silt","s_sand","s_soilwater_cap") #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- c("alt","aspect") # geophysical variables
-latitud <- FALSE #Only applies if ecogeo=TRUE
-#TRUE or FALSE type parameter
-##### Note:This parameter indicates whether the latitude variable (Y) that comes from the DECLATITUDE column of the passport table will be used to make the ecogeographic characterization (as a geophysical variable)
-longitud <- TRUE #Only applies if ecogeo=TRUE
-#TRUE or FALSE type parameter
-##### Note1:This parameter indicates whether the longitude variable (X) that comes from the DECLATITUDE column of the passport table will be used to make the ecogeographic characterization (as a geophysical variable)
+latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
+longitud <- FALSE 
 percenRF <- 0.66 # percentage of variables that will be selected by Random Forest 
 percenCorr <- 0.33 # percentage of variables that will be selected by the analysis of bivariate correlations, which is executed after the selection by Random Forest (for example, if you wanted to select 1/3 of the total of variables by bivariate correlations, percenRF would be 0.33
 CorrValue <- 0.5 # correlation threshold value, above (in its positive form) or below (in its negative form) of which it is assumed that there is a correlation between two variables.
@@ -215,15 +185,6 @@ nminvar <- 3 # minimum number of variables to select per component. For example,
 ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
 resultados <- Dir.Results # directory to place results
 
-## temp: read variables --------------------------------------------------------
-bioclim_ras <- terra::rast(file.path(Dir.Data.Envir, "bioclim.nc"))
-# bioclim_ras <- terra::project(bioclim_ras, "EPSG:4326")
-# names(bioclim_ras) <- bioclimv
-# geophys_ras <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
-# geophys_ras <- terra::project(geophys_ras, "EPSG:4326")
-# names(geophys_ras) <- geophysv
-# edaph_ras <- terra::rast(file.path(Dir.Data.Envir, "edaph.nc"))
-# names(edaph_ras) <- edaphv
 
 ## Variable selection: SelecVar ------------------------------------------------
 #' run variable selection (script VarSelection.R for each category of environmental variables):
