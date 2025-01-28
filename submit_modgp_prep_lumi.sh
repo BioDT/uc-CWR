@@ -16,4 +16,4 @@
 
 SPECIES="${1:-Lathyrus}"
 
-singularity run --bind $PWD cwr_0.4.3.sif "ModGP-run_prep.R" "$SPECIES"
+singularity run --bind $PWD cwr_0.4.4.sif "ModGP-run_prep.R" "$SPECIES"
