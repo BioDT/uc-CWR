@@ -201,12 +201,8 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	
 	### Raw soil moisture level data ----
 	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. These are then summed up and used in the bioclimatic variable computation of KrigR
-	if(!file.exists(
-		file.path(Dir, 
-							paste(tools::file_path_sans_ext(basename(FNAME)), 
-										"volumetric_soil_water_layer_1", "RAW.nc", 
-										sep = "_"))
-	)){
+	FNAME_RAW <- file.path(Dir, paste(tools::file_path_sans_ext(basename(FNAME)), "volumetric_soil_water_layer_1", "RAW.nc", sep = "_"))
+	if(!file.exists(FNAME_RAW)) {
 		#### Downloading ----
 		Qsoil1_ras <- CDownloadS(
 			Variable = "volumetric_soil_water_layer_1", # could also be total_precipitation
@@ -243,10 +239,7 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 		terra::metags(QSoilCombin_ras) <- terra::metags(Qsoil1_ras)
 		QSoilCombin_ras <- KrigR:::Meta.NC(
 			NC = QSoilCombin_ras, 
-			FName = file.path(Dir, 
-												paste(tools::file_path_sans_ext(FNAME), 
-															"volumetric_soil_water_layer_1", "RAW.nc", 
-															sep = "_")),
+			FName = FNAME_RAW,
 			Attrs = terra::metags(QSoilCombin_ras), Write = TRUE,
 			Compression = 9
 		)
