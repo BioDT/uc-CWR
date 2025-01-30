@@ -54,6 +54,8 @@ rsconnect/
 *.png
 *.txt
 *.rds
+*.tif
+*.xlsx
 !Data/*/GlobalAreaCRS.RData
 
 Logo/*
