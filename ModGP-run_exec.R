@@ -28,9 +28,13 @@ message(sprintf("SPECIES = %s", SPECIES))
 ## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
-Dir.Scripts <- file.path(Dir.Base, "R Scripts")
+Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 
+## Sourcing ---------------------------------------------------------------
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
+source(file.path(Dir.Scripts,"SHARED-Data.R"))
+source(file.path(Dir.Scripts,"ModGP-SDM.R"))
+source(file.path(Dir.Scripts,"ModGP-Outputs.R"))
 
 # Choose the number of parallel processes
 RUNNING_ON_LUMI <- TRUE
