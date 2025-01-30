@@ -376,14 +376,9 @@ FUN.DownBV <- function(
 }
 
 ## EDAPHIC DATA DOWNLOAD ------------------------------------------------------
-# HJ: new part: very rough draft for downloading edaphic data
-# missing all the important parts: proper data sources, functions
-# where to set the variables for each category (bioclimatic, edaphic, geophysical)?
-
-# Edaphic data download
-
-# HJ: ONLY FOR TESTING PURPOSES: soildata package
-# needed: data source and downloading commands for .nc files; where to set the selected variables
+# HJ: new part, INCOMPLETE!
+# EL: data also need to be changed to get the same resolution as the BioClim 
+# variables downloaded with FUN.DownBV
 
 FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
                        Force = FALSE, # do not overwrite already present data, 
@@ -401,7 +396,7 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
   if(!file.exists(
     
   )){
-    ## downloading: do this with KrigR (CDownloadS() for ECMWF data only) or other way?
+    ## downloading
     
   }
   evarg <- c(arg1, arg2, arg3)

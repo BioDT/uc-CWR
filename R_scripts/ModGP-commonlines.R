@@ -39,6 +39,7 @@ package_vec <- c(
   'viridis', # colour palette
   'bit64',
   'iterators',
+  'gdalUtilities', # to download from SoilGrids (FUN.DownEV)
   
   # Capfitogen SelectVar packages 
   # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
