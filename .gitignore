@@ -56,7 +56,9 @@ rsconnect/
 *.rds
 *.tif
 *.xlsx
+*.zip
 !Data/*/GlobalAreaCRS.RData
+Data/Environment/soil/
 
 Logo/*
 
@@ -74,4 +76,5 @@ Logo/*
 
 # Downloaded data
 CAPFITOGEN3/
+scripts/
 hq
