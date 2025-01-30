@@ -77,6 +77,8 @@ PH_stack <- stack(PH_nutrient, PH_toxicity)
 PH_stack <- raster::resample(PH_stack, BV_ras[[1]])
 PH_stack <- stack(PH_stack, BV_ras$BIO1, BV_ras$BIO12)
 names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
+FNAME <- file.path(Dir.Data.Envir, "PH_stack")
+saveObj(PH_stack, file = FNAME)
 
 ## SDM Data Preparations --------------------------------------------------
 message("Preparing data for SDM workflow")
@@ -92,7 +94,3 @@ species_names <- names(SDMInput_ls)
 
 # Save the species names to a file
 writeLines(species_names, "species_list.txt")
-
-# Save the PH stack
-FNAME <- file.path(Dir.Data.Envir, "PH_stack")
-saveObj(PH_stack, file = FNAME)
