@@ -1,6 +1,47 @@
 # this script starts with a copy of @trossi's 'capfitogen' script and will serve 
 # as notes and tests for scripting. To be deleted when a full capfitogen pipeline
 # is in place.
+## Heli's handover notes --------------------------------------
+#' Capfitogen R script modifications for CWR BioDT project
+#' Heli Juottonen, CSC (heli.juottonen@csc.fi) (please email if any questions!)
+#' 
+#' Main script: capfitogen_master_061124.R
+#' 
+#' sources the following scripts:
+#' 
+#' 1. SHARED-Data.R
+#' 	1. downloading species data from GBIF: FUN.DownGBIF (from ModGP)
+#' 	2. downloading environmental data (.nc files):
+#' 		FUN.DownBV, bioclimatic data (as in ModGP, modifications needed?)
+#' 		FUN.DownEV, edaphic data (not ready, only a very rough draft)
+#' 		FUN.DownGV, geophysical data (not ready, only a very rough draft)
+#' 
+#' 		unclear: best way to obtain the data as .nc files?
+#' 		unclear: where to define which specific variables downloaded for each category?
+#' 		unclear: how and where and if to set the geographic area?
+#' 
+#' 		outputs (=inputs for the next step): 
+#' 			sf file of species occurrence: Species_ls$occs
+#' 			raster stacks: bioclim_ras, edaph_ras, geophys_ras
+#' 
+#' 2. VarSelection.R
+#' 	1. selection of variables separately for each category (bioclimatic, edaphic, geophysical):
+#' 		FUN.VarSelection
+#' 		uses the vifcor approach as ModGP
+#' 
+#' 		outputs (= inputs for the next step): 
+#' 		values of selected variables extracted from raster stacks: bioclim_ext, edaph_ext, geophys_ext 
+#' 
+#' 3. ELCMap.R
+#' 	1. clustering (kmeans/BIC): FUN.KmeansClust
+#' 		run separately for each variable category (bioclimatic, edaphic, geophysical)
+#' 
+#' 		outputs (= inputs for the next step): bioclim_cl, geophys_cl, edaph_cl
+#' 		(coordinates, cluster membership, extracted environmental variable values)
+#' 
+#' 	2. creating maps (not ready, requires someone with proper spatial data R skills)
+#' 
+#' 
 #-------------------------------------------------
 #test downloading soil data from harmonized world soil database v2.0 (hwsd)
 hwsd_path = file.path(getwd(), "Data", "Environment")
