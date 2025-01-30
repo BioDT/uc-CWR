@@ -1,1 +1,0 @@
-This directory contains files to set up and configure a Docker container that the ModGP can be run inside. 
