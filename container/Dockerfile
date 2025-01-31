@@ -94,11 +94,8 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-ggpmisc=0.6.1 \
         r-gridExtra=2.3 \
 # Packages for capfitogen
-        r-sp=2.1-4 \
-        r-raster=3.6-30 \
         r-maptools=1.1-8 \
         r-dismo=1.3-16 \
-        r-rgdal=1.6-7 \
         r-rgeos=0.6-4 \
         r-RJSONIO=1.3-1.9 \
         r-googleVis=0.7.3 \
