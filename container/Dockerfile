@@ -42,12 +42,12 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     conda install -c conda-forge --override-channels \
         r-devtools=2.4.5 \
-        r-remotes=2.5.0 \
-        r-rcpp=1.0.13-1 \
+        r-remotes=2.4.2.1 \
+        r-rcpp=1.0.12 \
         r-pbapply=1.7-2 \
         r-tidyverse=2.0.0 \
-        r-terra=1.7-71 \
-        r-sf=1.0-16 \
+        r-terra=1.7-65 \
+        r-sf=1.0-15 \
         && \
     /conda/bin/conda clean -afy
 
@@ -57,16 +57,16 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda install -c conda-forge --override-channels \
         r-rcpparmadillo=14.2.2-1 \
         r-iterators=1.0.14 \
-        r-sp=2.1-4 \
-        r-raster=3.6-30 \
+        r-sp=2.1-3 \
+        r-raster=3.6-26 \
         r-rgbif=3.8.0 \
         r-rnaturalearth=1.0.1 \
         r-rnaturalearthdata=1.0.0 \
-        r-ncdf4=1.23 \
-        r-epi=2.58 \
+        r-ncdf4=1.22 \
+        r-epi=2.47.1 \
         r-png=0.1-8 \
         r-keyring=1.3.2 \
-        r-codetools=0.2-20 \
+        r-codetools=0.2-19 \
         r-geometries=0.2-4 \
         r-jsonify=1.2.2 \
         r-rapidjsonr=1.2.0 \
@@ -75,7 +75,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-geojsonsf=2.0.3 \
         r-r.devices=2.17.2 \
         r-dbi=1.2.3 \
-        r-rlang=1.1.4 \
+        r-rlang=1.1.3 \
         r-glue=1.8.0 \
         r-withr=3.0.2 \
         r-fmesher=0.2.0 \
