@@ -73,7 +73,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-sfheaders=0.4.4 \
         r-countrycode=1.6.0 \
         r-geojsonsf=2.0.3 \
-        r-inlabru=2.12.0 \
         r-r.devices=2.17.2 \
         r-dbi=1.2.3 \
         r-rlang=1.1.4 \
@@ -115,43 +114,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-fpc=2.2-13 \
         r-vegan=2.6-8 \
         r-adegenet=2.1.10 \
-# Packages for INLA
-        r-locfit=1.5-9.10 \
-        r-ash=1.0-15 \
-        r-multicool=1.0.1 \
-        r-pracma=2.4.4 \
-        r-hdrcde=3.4 \
-        r-ks=1.14.3 \
-        r-bitops=1.0-9 \
-        r-rainbow=3.8 \
-        r-RCurl=1.98-1.16 \
-        r-fds=1.8 \
-        r-deSolve=1.40 \
-        r-fda=6.2.0 \
-        r-jpeg=0.1-10 \
-        r-TeachingDemos=2.13 \
-        r-coda=0.19-4.1 \
-        r-mcmc=0.9-8 \
-        r-dotCall64=1.2 \
-        r-rbibutils=2.3 \
-        r-MCMCpack=1.7-1 \
-        r-gtools=3.9.5 \
-        r-spam=2.11-0 \
-        r-maps=3.4.2.1 \
-        r-dfidx=0.1-0 \
-        r-Formula=1.2-5 \
-        r-lmtest=0.9-40 \
-        r-Rdpack=2.6.2 \
-        r-mnormt=2.1.1 \
-        r-Deriv=4.1.6 \
-        r-evd=2.3-7.1 \
-        r-fields=16.3 \
-        r-gsl=2.1-8 \
-        r-markdown=1.13 \
-        r-mlogit=1.1-1 \
-        r-rgl=1.3.1 \
-        r-sn=2.1.1 \
-        r-splancs=2.01-45 \
 # Packages for sdm
         r-dismo=1.3-16 \
         r-gbm=2.2.2 \
@@ -187,26 +149,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "sdm", \
         "usdm" \
         ))' && \
-    /conda/bin/conda clean -afy
-
-# Install INLA
-# See https://www.r-inla.org/download-install
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
-    # Bugfix: https://github.com/hrue/r-inla/issues/86#issuecomment-1837534618
-    Rscript -e 'install.packages("MatrixModels", type="source")' && \
-    # Fix permissions
-    find /conda/env/lib/R/library/INLA/ -type f -perm -u+x -exec chmod a+x {} \; && \
-    /conda/bin/conda clean -afy
-
-# Install intSDM etc
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs@v.1.2.0", dependencies=FALSE)' && \
-    # Bugfix: Installing intSDM directly from github doesn't work so we install it first from cran
-    Rscript -e 'install.packages("intSDM")' && \
-    Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install mraster
