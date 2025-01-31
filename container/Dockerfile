@@ -142,16 +142,16 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "giscoR", \
         "tidyterra", \
         "geodata", \
-        "mmap", \
-        "sdm", \
-        "usdm" \
+        "mmap" \
         ))' && \
+    Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/sdm/sdm_1.1-8.tar.gz", repos=NULL, type="source")' && \
+    Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/usdm_2.1-7.tar.gz", repos=NULL, type="source")' && \
     /conda/bin/conda clean -afy
 
 # Install mraster
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
-    Rscript -e 'devtools::install_github("babaknaimi/mraster", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("babaknaimi/mraster", ref="386058cc11aa169193c1f3dc096ae9bd04736192", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install KrigR
@@ -159,7 +159,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
-    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="Development", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="94cdb9e0aa3cff9f996575f4fb3d10c617eb37ab", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install remaining sdm dependencies (should be none)
