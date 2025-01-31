@@ -41,13 +41,13 @@ RUN . /conda/etc/profile.d/conda.sh && \
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     conda install -c conda-forge --override-channels \
-        r-devtools \
-        r-remotes \
-        r-rcpp \
-        r-pbapply \
-        r-tidyverse \
-        r-sf \
-        r-terra \
+        r-devtools=2.4.5 \
+        r-remotes=2.4.2.1 \
+        r-rcpp=1.0.12 \
+        r-pbapply=1.7-2 \
+        r-tidyverse=2.0.0 \
+        r-terra=1.7-65 \
+        r-sf=1.0-15 \
         && \
     /conda/bin/conda clean -afy
 
@@ -55,119 +55,78 @@ RUN . /conda/etc/profile.d/conda.sh && \
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     conda install -c conda-forge --override-channels \
-        r-rcpparmadillo \
-        r-iterators \
-        r-sp \
-        r-raster \
-        r-rgbif \
-        r-rnaturalearth \
-        r-rnaturalearthdata \
-        r-ncdf4 \
-        r-epi \
-        r-png \
-        r-keyring \
-        r-codetools \
-        r-geometries \
-        r-jsonify \
-        r-rapidjsonr \
-        r-sfheaders \
-        r-countrycode \
-        r-geojsonsf \
-        r-inlabru \
-        r-r.devices \
-        r-dbi \
-        r-rlang \
-        r-glue \
-        r-withr \
-        r-fmesher \
-        r-rgdal \
-        r-doParallel \
-        r-foreach \
-        r-doSNOW \
-        r-automap \
-        r-fasterize \
-        r-stars \
-        r-ggplot2 \
-        r-ggpubr \
-        r-tidyr \
-        r-viridis \
-        r-cowplot \
-        r-ggpmisc \
-        r-gridExtra \
+        r-rcpparmadillo=14.2.2-1 \
+        r-iterators=1.0.14 \
+        r-sp=2.1-3 \
+        r-raster=3.6-26 \
+        r-rgbif=3.8.0 \
+        r-rnaturalearth=1.0.1 \
+        r-rnaturalearthdata=1.0.0 \
+        r-ncdf4=1.22 \
+        r-epi=2.47.1 \
+        r-png=0.1-8 \
+        r-keyring=1.3.2 \
+        r-codetools=0.2-19 \
+        r-geometries=0.2-4 \
+        r-jsonify=1.2.2 \
+        r-rapidjsonr=1.2.0 \
+        r-sfheaders=0.4.4 \
+        r-countrycode=1.6.0 \
+        r-geojsonsf=2.0.3 \
+        r-r.devices=2.17.2 \
+        r-dbi=1.2.3 \
+        r-rlang=1.1.3 \
+        r-glue=1.8.0 \
+        r-withr=3.0.2 \
+        r-fmesher=0.2.0 \
+        r-rgdal=1.6-7 \
+        r-doParallel=1.0.17 \
+        r-foreach=1.5.2 \
+        r-doSNOW=1.0.20 \
+        r-automap=1.1-12 \
+        r-fasterize=1.1.0 \
+        r-stars=0.6-6 \
+        r-ggplot2=3.5.1 \
+        r-ggpubr=0.6.0 \
+        r-tidyr=1.3.1 \
+        r-viridis=0.6.5 \
+        r-cowplot=1.1.3 \
+        r-ggpmisc=0.6.1 \
+        r-gridExtra=2.3 \
 # Packages for capfitogen
-        r-sp \
-        r-raster \
-        r-maptools \
-        r-dismo \
-        r-rgdal \
-        r-rgeos \
-        r-RJSONIO \
-        r-googleVis \
-        r-cluster \
-        r-ade4 \
-        r-labdsv \
-        r-mclust \
-        r-clustvarsel \
-        r-randomForest \
-        r-modeltools \
-        r-lattice \
-        r-flexmix \
-        r-fpc \
-        r-vegan \
-        r-adegenet \
-# Packages for INLA
-        r-locfit \
-        r-ash \
-        r-multicool \
-        r-pracma \
-        r-hdrcde \
-        r-ks \
-        r-bitops \
-        r-rainbow \
-        r-RCurl \
-        r-fds \
-        r-deSolve \
-        r-fda \
-        r-jpeg \
-        r-TeachingDemos \
-        r-coda \
-        r-mcmc \
-        r-dotCall64 \
-        r-rbibutils \
-        r-MCMCpack \
-        r-gtools \
-        r-spam \
-        r-maps \
-        r-dfidx \
-        r-Formula \
-        r-lmtest \
-        r-Rdpack \
-        r-mnormt \
-        r-Deriv \
-        r-evd \
-        r-fields \
-        r-gsl \
-        r-markdown \
-        r-mlogit \
-        r-rgl \
-        r-sn \
-        r-splancs \
+        r-maptools=1.1-8 \
+        r-dismo=1.3-16 \
+        r-rgeos=0.6-4 \
+        r-RJSONIO=1.3-1.9 \
+        r-googleVis=0.7.3 \
+        r-cluster=2.1.8 \
+        r-ade4=1.7-22 \
+        r-labdsv=2.1-0 \
+        r-mclust=6.1.1 \
+        r-clustvarsel=2.3.4 \
+        r-randomForest=4.7-1.2 \
+        r-modeltools=0.2-23 \
+        r-lattice=0.22-6 \
+        r-flexmix=2.3-19 \
+        r-fpc=2.2-13 \
+        r-vegan=2.6-8 \
+        r-adegenet=2.1.10 \
 # Packages for sdm
-        r-dismo \
-        r-gbm \
-        r-rjava \
-        r-glmnet \
-        r-tree \
-        r-mda \
-        r-plotrix \
-        r-plotmo \
-        r-earth \
-        r-ranger \
-        r-shinybs \
-        r-crosstalk \
-        r-rsnns \
-        r-leaflet \
-        r-leaflet.providers \
+        r-dismo=1.3-16 \
+        r-gbm=2.2.2 \
+        r-rjava=1.0-11 \
+        r-glmnet=4.1-8 \
+        r-tree=1.0-44 \
+        r-mda=0.5-5 \
+        r-plotrix=3.8-4 \
+        r-plotmo=3.6.4 \
+        r-earth=5.3.4 \
+        r-ranger=0.17.0 \
+        r-shinybs=0.61.1 \
+        r-crosstalk=1.2.1 \
+        r-rsnns=0.4-17 \
+        r-leaflet=2.2.2 \
+        r-leaflet.providers=2.0.0 \
         && \
     /conda/bin/conda clean -afy
 
@@ -183,36 +142,16 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "giscoR", \
         "tidyterra", \
         "geodata", \
-        "mmap", \
-        "sdm", \
-        "usdm" \
+        "mmap" \
         ))' && \
-    /conda/bin/conda clean -afy
-
-# Install INLA
-# See https://www.r-inla.org/download-install
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'install.packages("INLA",repos=c(getOption("repos"),INLA="https://inla.r-inla-download.org/R/stable"), dep=TRUE)' && \
-    # Bugfix: https://github.com/hrue/r-inla/issues/86#issuecomment-1837534618
-    Rscript -e 'install.packages("MatrixModels", type="source")' && \
-    # Fix permissions
-    find /conda/env/lib/R/library/INLA/ -type f -perm -u+x -exec chmod a+x {} \; && \
-    /conda/bin/conda clean -afy
-
-# Install intSDM etc
-RUN . /conda/etc/profile.d/conda.sh && \
-    conda activate /conda/env && \
-    Rscript -e 'devtools::install_github("PhilipMostert/PointedSDMs", dependencies=FALSE)' && \
-    # Bugfix: Installing intSDM directly from github doesn't work so we install it first from cran
-    Rscript -e 'install.packages("intSDM")' && \
-    Rscript -e 'devtools::install_github("PhilipMostert/intSDM", dependencies=FALSE)' && \
+    Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/Archive/sdm/sdm_1.1-8.tar.gz", repos=NULL, type="source")' && \
+    Rscript -e 'install.packages("https://cran.r-project.org/src/contrib/usdm_2.1-7.tar.gz", repos=NULL, type="source")' && \
     /conda/bin/conda clean -afy
 
 # Install mraster
 RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
-    Rscript -e 'devtools::install_github("babaknaimi/mraster", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("babaknaimi/mraster", ref="386058cc11aa169193c1f3dc096ae9bd04736192", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install KrigR
@@ -220,7 +159,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
-    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="Development", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="94cdb9e0aa3cff9f996575f4fb3d10c617eb37ab", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install remaining sdm dependencies (should be none)
