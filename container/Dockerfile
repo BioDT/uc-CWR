@@ -168,12 +168,16 @@ RUN . /conda/etc/profile.d/conda.sh && \
     Rscript -e 'sdm::installAll() ' && \
     /conda/bin/conda clean -afy
 
+# Workaround for memory issues in terra
+ADD terra_max_ram.cpp /opt/
+RUN /conda/env/bin/x86_64-conda-linux-gnu-g++ /opt/terra_max_ram.cpp -shared -fPIC -o /conda/env/lib/terra_max_ram.so && \
+    rm /opt/terra_max_ram.cpp
+
 # ENTRYPOINT ["bash"]
 
 # Clean files not needed runtime
 RUN find -L /conda/env/ -type f -name '*.a' -delete -print && \
     find -L /conda/env/ -type f -name '*.js.map' -delete -print
-
 
 #########################################
 # Final container image
@@ -181,6 +185,9 @@ RUN find -L /conda/env/ -type f -name '*.a' -delete -print && \
 FROM base
 
 COPY --from=conda /conda/env/ /conda/env/
+
+# Workaround for memory issues in terra
+ENV LD_PRELOAD=/conda/env/lib/terra_max_ram.so
 
 ENV PROJ_DATA=/conda/env/share/proj \
     PATH=/conda/env/bin:$PATH \

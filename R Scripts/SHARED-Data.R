@@ -201,12 +201,8 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	
 	### Raw soil moisture level data ----
 	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. These are then summed up and used in the bioclimatic variable computation of KrigR
-	if(!file.exists(
-		file.path(Dir, 
-							paste(tools::file_path_sans_ext(basename(FNAME)), 
-										"volumetric_soil_water_layer_1", "RAW.nc", 
-										sep = "_"))
-	)){
+	FNAME_RAW <- file.path(Dir, paste(tools::file_path_sans_ext(basename(FNAME)), "volumetric_soil_water_layer_1", "RAW.nc", sep = "_"))
+	if(!file.exists(FNAME_RAW)) {
 		#### Downloading ----
 		Qsoil1_ras <- CDownloadS(
 			Variable = "volumetric_soil_water_layer_1", # could also be total_precipitation
@@ -243,10 +239,7 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 		terra::metags(QSoilCombin_ras) <- terra::metags(Qsoil1_ras)
 		QSoilCombin_ras <- KrigR:::Meta.NC(
 			NC = QSoilCombin_ras, 
-			FName = file.path(Dir, 
-												paste(tools::file_path_sans_ext(FNAME), 
-															"volumetric_soil_water_layer_1", "RAW.nc", 
-															sep = "_")),
+			FName = FNAME_RAW,
 			Attrs = terra::metags(QSoilCombin_ras), Write = TRUE,
 			Compression = 9
 		)
@@ -256,24 +249,20 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	}
 	
 	### Bioclimatic data ----
-	if(file.exists(file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc")))){
-		BV_ras <- stack(file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc")))
-	}else{
-		BV_ras <- BioClim(
-			Temperature_Var = "2m_temperature",
-			Temperature_DataSet = "reanalysis-era5-land",
-			Temperature_Type = NA,
-			Water_Var = "volumetric_soil_water_layer_1", # could also be total_precipitation
-			Water_DataSet = "reanalysis-era5-land-monthly-means",
-			Water_Type = "monthly_averaged_reanalysis",
-			Y_start = T_Start, Y_end = T_End,
-			Extent = ne_countries(type = "countries", scale = "medium")[,1],
-			Dir = Dir, FileName = paste0("BV_", T_Start, "-", T_End, ".nc"), 
-			FileExtension = ".nc", Compression = 9, # file storing
-			API_User = API_User, 
-			API_Key = API_Key
-		)
-	}
+	BV_ras <- BioClim(
+		Temperature_Var = "2m_temperature",
+		Temperature_DataSet = "reanalysis-era5-land",
+		Temperature_Type = NA,
+		Water_Var = "volumetric_soil_water_layer_1", # could also be total_precipitation
+		Water_DataSet = "reanalysis-era5-land-monthly-means",
+		Water_Type = "monthly_averaged_reanalysis",
+		Y_start = T_Start, Y_end = T_End,
+		Extent = ne_countries(type = "countries", scale = "medium")[,1],
+		Dir = Dir, FileName = basename(FNAME),
+		FileExtension = ".nc", Compression = 9, # file storing
+		API_User = API_User,
+		API_Key = API_Key
+	)
 	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
