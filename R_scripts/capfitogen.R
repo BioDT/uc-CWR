@@ -93,8 +93,8 @@ soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.
   #' MostProbable.vrt has the most probable soil type per gridcell.
   #' 
   # gdal_translate() converts raster data between different formats.
-soilGrids_data <- gdal_translate(paste0(soilGrids_url,
-                                        'ocs/ocs_0-30cm_mean.vrt'),
+soilGrids_data <- gdal_translate(
+  src_dataset = paste0(soilGrids_url,'ocs/ocs_0-30cm_mean.vrt'),
                                  paste0(Dir.Data.Envir, 
                                         "/crop_roi_igh_r.tif"),
                                  tr = c(2500,2500) # target resolution 

@@ -371,48 +371,116 @@ FUN.DownBV <- function(
 
 FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
                        Force = FALSE, # do not overwrite already present data, 
-                       ){
+                       resample_to_match = FALSE){
+  # define a file name
   FNAME <- file.path(Dir, "edaphic.nc")
   
-  # check if file exists and whether to overwrite
+  # check if file already exists and whether to overwrite
   if(!Force & file.exists(FNAME)){
     EV_ras <- stack(FNAME)
     #names(EV_ras) <- paste0("BIO", 1:19) # replace with edaphic names vector
     message("Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
     return(EV_ras)
   }
+  # if the file doesn't already exist:
+    ## downloading data from SoilGrids
+  if(!file.exists(FNAME)){
+    message("Start downloading data from SoilGrids")
+    soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
+    #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
+    #' NB! Each global map occupies circa 5 GB! It takes a while to download.
+    #' in addition, https://files.isric.org/soilgrids/latest/data/wrb/
+    #' has maps of soil types, as estimated probability of occurrence per type.
+    #' MostProbable.vrt has the most probable soil type per gridcell.
+    SoilGrids_variables_in <- c(
+      "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
+       "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
+       "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
+       "silt/silt_0-5cm_mean", # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
+       "clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
+       "sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
+       "nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
+       "phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
+       "ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
+       "ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
+       "soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+    SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
+    soilGrids_data <- stack()
+    for (i in length(SoilGrids_variables_in)) {
+      variable_name = SoilGrids_variables[]
+      soilGrids_data[[i]] <- gdal_translate(
+        src_dataset = paste0(soilGrids_url, SoilGrids_variables_in[i], ".vrt"), # input to be downloaded
+        dst_dataset = paste0(Dir.Data.Envir, "/", SoilGrids_variables[i], ".tif"), # output file
+        tr = c(2500,2500) # target resolution 
+      )
+    }
+    ## downloading data from HSWD
+    message("Start downloading data from HSWD (harmonised world soil database)")
+    PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+    PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+    HSWD_PH_stack <- stack(PH_nutrient, PH_toxicity)
+    
+    ## combine and rename rasters
+    EV_stack <- stack(HSWD_PH_stack, soilGrids_data)
+    names(EV_stack) <- c("Nutrient", 
+                       "Toxicity", 
+                       SoilGrids_variables)
   
-  if(!file.exists(
-    
-  )){
-    ## downloading
-    
+    ## resample to match a provided raster object's origin and resolution
+    if(!resample_to_match){
+      EV_stack <- raster::resample(HSWD_PH_stack, # rasters to be resampled
+                                   resample_to_match) # raster with parameters to be resampled to
+      }
   }
-  evarg <- c(arg1, arg2, arg3)
-  # evargs <- commandArgs(trailingOnly = TRUE)
-  #evarg <- c("soc", "silt")
-  edaph_ras <- soil_world(evarg, depth = 5, path = file.path(Dir.Data.Envir, "Edaphic"))
-  names(edaph_ras) <- evarg
   
-  ### Masking ----
+  ### Saving ----
+  terra::writeCDF(EV_stack, filename = FNAME, overwrite = FALSE)
+  #unlink(file.path(Dir.Data.Envir, "Edaphic", "soil_world", "*.tif"))
+  
+  EV_stack
+  
+}
+
+### Masking ----
+# whole world
+#Land_sp <- ne_countries(type = "countries", scale = "medium")
+
+# HJ: for testing/ to match previous Capfitogen tests: only Spain
+# HJ: this is an attempt to do the same thing with terra that was done with KrigR in ModGP (see below)
+# please switch back to KrigR is wanted/needed
+# Land_sp <- ne_states("Spain")
+# edaph_ras <- crop(edaph_ras, terra::ext(Land_sp))
+# edaph_ras <- terra::mask(edaph_ras, vect(Land_sp))
+# BV_ras <- crop(BV_ras, extent(Land_sp))
+# BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
+# BV_ras <- mask(BV_ras, BV_mask)
+
+# HJ: missing: data source, download function for .nc files, where to set the selected variables
+
+FUN.DownGV <- function(arg1, arg2){
+  
+  FNAME <- file.path(Dir.Data.Envir, "geophys.nc")
+  
+  evarg <- c(arg1, arg2)
+  geophys_ras <- ??? file.path(Dir.Data.Envir, "Geophysical")
+  
   # whole world
   #Land_sp <- ne_countries(type = "countries", scale = "medium")
-  
   # HJ: for testing/ to match previous Capfitogen tests: only Spain
   # HJ: this is an attempt to do the same thing with terra that was done with KrigR in ModGP (see below)
   # please switch back to KrigR is wanted/needed
   Land_sp <- ne_states("Spain")
-  edaph_ras <- crop(edaph_ras, terra::ext(Land_sp))
-  edaph_ras <- terra::mask(edaph_ras, vect(Land_sp))
+  geophys_ras <- crop(geophys_ras, terra::ext(Land_sp))
+  geophys_ras <- terra::mask(geophys_ras, vect(Land_sp))
   
   # BV_ras <- crop(BV_ras, extent(Land_sp))
   # BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
   # BV_ras <- mask(BV_ras, BV_mask)
   
   ### Saving ----
-  terra::writeCDF(edaph_ras, filename = FNAME, overwrite = TRUE)
-  unlink(file.path(Dir.Data.Envir, "Edaphic", "soil_world", "*.tif"))
+  terra::writeCDF(geophys_ras, filename = FNAME, overwrite = TRUE)
+  unlink(file.path(Dir.Data.Envir, "Geophysical")) 
   
-  edaph_ras
+  geophys_ras
   
 }

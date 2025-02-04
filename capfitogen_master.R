@@ -11,9 +11,9 @@
 #'  - R_Scripts directory containing:
 #'  	- "MoDGP-commonlines.R"
 #'  	- "SHARED-APICredentials.R" -- NB! internal to project members, ask for access
-#'  	- "SHARED-Data_CAPFITOGEN.R"
-#'  	- "SelectVar.R" -- CAPFITOGEN tool
-#'  	- 
+#'  	- "SHARED-Data.R"
+#'  	- "ELCmaps" - CAPFITOGEN tool
+#'  	- "Complementa" - CAPFITOGEN tool
 #' AUTHORS: [Erik Kusch, Heli Juottonen, Eva Lieungh]
 #' Capfitogen credit: Parra-Quijano et al. 2021, 
 #'                    https://repositorio.unal.edu.co/handle/unal/85787
@@ -62,11 +62,11 @@ message(sprintf("numberOfCores = %d", numberOfCores))
 
 # DATA ====================================================================
 ## Run SHARED-Data script -------------------------------------------------
-## defines FUN.DownGBIF(), FUN.DownBV()
+## defines FUN.DownGBIF(), FUN.DownBV(), FUN.DownEV()
 source(file.path(Dir.R_scripts, "SHARED-Data.R"))
 
 ## GBIF Data --------------------------------------------------------------
-message("Retrieving GBIF data")
+message("Downloading new or loading existing GBIF data")
 ## species of interest
 Species_ls <- FUN.DownGBIF(
   species = SPECIES, # which species to pull data for
@@ -77,20 +77,32 @@ Species_ls <- FUN.DownGBIF(
 )
 
 ## Environmental Data -----------------------------------------------------
-## Bioclomatic data: 19 BioClim variables
-message("Retrieving bioclimatic variables") # NB! slow
+##' Bioclomatic data: 19 BioClim variables
+##' is each file of each variable >20GB? 
+message("Downloading new or loading existing 19 BioClim bioclimatic variables")
 bioclim_data <- FUN.DownBV(
-  T_Start = 1995, # what year to begin climatology calculation in
-  T_End = 2015, # what year to end climatology calculation in
+  T_Start = 2000, # what year to begin climatology calculation in
+  T_End = 2001, # what year to end climatology calculation in
   Dir = Dir.Data.Envir, # where to store the data output on disk
   Force = FALSE # do not overwrite already present data
   )
 
 ## Edaphic data: 
+message("Retrieving edaphic variables")
 edaphic_data <- FUN.DownEV(
   Dir = Dir.Data.Envir,
-  Force = FALSE
+  Force = FALSE,
+  resample_to_match = bioclim_data[[1]]
 )
+
+# PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+# PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+# PH_stack <- stack(PH_nutrient, PH_toxicity)
+# PH_stack <- raster::resample(PH_stack, # rasters to be resampled
+#                              bioclim_data[[1]]) # raster with parameters to be resampled to
+# PH_stack <- stack(PH_stack, bioclim_data$BIO1, bioclim_data$BIO12)
+# names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
+
 
 #' existing data in "Data/Environment/BV-1985-2015.nc" 
 #' and soil data in .bil under /soil downloaded from Harmonized World

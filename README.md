@@ -2,7 +2,7 @@
 
 ## ModGP on Rstudio
 
-1. Source `ModGP MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus.
+1. Source `ModGP_MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus. NB! ModGP should be run on a supercomputer. The environmental data download has very large interim files (>40GB per year per variable, >200 GB overall), and the distribution modelling also requires a long time to run.
 
 
 ## ModGP on LUMI with Hyperqueue
