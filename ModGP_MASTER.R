@@ -3,7 +3,7 @@
 #' CONTENTS: 
 #'  - Execution of ModGP pipeline
 #'  DEPENDENCIES:
-#'  - R Scripts directory containing:
+#'  - R_scripts directory containing:
 #'  	- "ModGP-Outputs.R"
 #'  	- "ModGP-SDM.R"
 #'  	- "SHARED-APICredentials.R" 
@@ -28,7 +28,7 @@ message(sprintf("SPECIES = %s", SPECIES))
 ## Directories ------------------------------------------------------------
 ### Define directories in relation to project directory
 Dir.Base <- getwd()
-Dir.Scripts <- file.path(Dir.Base, "R Scripts")
+Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
