@@ -19,6 +19,7 @@ package_vec <- c(
   'exactextractr', # HJ: added to solve extraction problems
   #'geodata', # HJ: added to get soil data for testing
   'ggplot2', # ggplot machinery
+  'ggpp',
   'ggpmisc', # table plotting in ggplot environment
   'ggpubr', # t-test comparison in ggplot
   'gridExtra', # ggplot saving in PDF

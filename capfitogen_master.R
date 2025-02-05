@@ -18,7 +18,7 @@
 #' Capfitogen credit: Parra-Quijano et al. 2021, 
 #'                    https://repositorio.unal.edu.co/handle/unal/85787
 #' ####################################################################### #
-
+#https://github.com/ErikKusch/KrigR/blob/94cdb9e0aa3cff9f996575f4fb3d10c617eb37ab/metadata/reanalysis-era5-land.RData
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
 rm(list=ls()) # clean environment
@@ -79,10 +79,12 @@ Species_ls <- FUN.DownGBIF(
 ## Environmental Data -----------------------------------------------------
 ##' Bioclomatic data: 19 BioClim variables
 ##' is each file of each variable >20GB? 
+##' Will this download Global Multi-resolution Terrain Elevation Data (GMTED2010) as well?
+##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
 message("Downloading new or loading existing 19 BioClim bioclimatic variables")
 bioclim_data <- FUN.DownBV(
-  T_Start = 2000, # what year to begin climatology calculation in
-  T_End = 2001, # what year to end climatology calculation in
+  T_Start = 1999, # what year to begin climatology calculation in
+  T_End = 1999, # what year to end climatology calculation in
   Dir = Dir.Data.Envir, # where to store the data output on disk
   Force = FALSE # do not overwrite already present data
   )
@@ -92,36 +94,9 @@ message("Retrieving edaphic variables")
 edaphic_data <- FUN.DownEV(
   Dir = Dir.Data.Envir,
   Force = FALSE,
-  resample_to_match = bioclim_data[[1]]
+  #resample_to_match = bioclim_data[[1]]
 )
 
-# PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
-# PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
-# PH_stack <- stack(PH_nutrient, PH_toxicity)
-# PH_stack <- raster::resample(PH_stack, # rasters to be resampled
-#                              bioclim_data[[1]]) # raster with parameters to be resampled to
-# PH_stack <- stack(PH_stack, bioclim_data$BIO1, bioclim_data$BIO12)
-# names(PH_stack) <- c("Nutrient", "Toxicity", "Temperature", "Soil Moisture")
-
-
-#' existing data in "Data/Environment/BV-1985-2015.nc" 
-#' and soil data in .bil under /soil downloaded from Harmonized World
-#' Soil Database version 2.0
-#'
-# HJ: this section is not ready, used ready .nc files for testing instead
-# Three functions: 
-# 1. Bioclimatic data: FUN.DownBV
-# 2. Edaphic data: FUN.DownEV
-# 3. Geophysical data: FUN.DownGV
-
-# message("Retrieving environmental data")
-# 
-# # Bioclimatic data 
-# 
-# message("Retrieving bioclimatic data")
-# 
-# # HJ: bioclimatic data lines from ModGP. TO DO: adapt to Capfitogen
-# 
 # biocl_ras <- FUN.DownBV(T_Start = 1985, # what year to begin climatology calculation in
 #                      T_End = 2015, # what year to end climatology calculation in
 #                      Dir = Dir.Data.Envir, # where to store the data output on disk

@@ -9,22 +9,24 @@
 #' ####################################################################### #
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
-# queries download from GBIF, handles and cleans data, returns SF MULTIPOINT object and GBIF download metadata
-FUN.DownGBIF <- function(species = NULL, # species name as character for whose genus data is to be downloaded
-						 Dir = getwd(), # where to store the data
-						 Force = FALSE, # overwrite existing data?
-						 Mode = "ModGP", # which specification to run, either for whole GENUS of supplied species (ModGP), or for species directly (Capfitogen)
-						 parallel = 1 # an integer, 1 = sequential; always defaults to sequential when Mode == "Capfitogen"
+#' queries download from GBIF, handles and cleans data, 
+#' returns SF MULTIPOINT object and GBIF download metadata
+FUN.DownGBIF <- function(
+    species = NULL, # species name as character for whose genus data is to be downloaded
+		Dir = getwd(), # where to store the data
+		Force = FALSE, # overwrite existing data?
+		Mode = "ModGP", # which specification to run, either for whole GENUS of supplied species (ModGP), or for species directly (Capfitogen)
+		parallel = 1 # an integer, 1 = sequential; always defaults to sequential when Mode == "Capfitogen"
 ){
 	## Preparing species name identifiers
 	input_species <- species
 	
-	## Focussing on Genus-part of the name if Mode is set to ModGP
+	## Focusing on Genus-part of the name if Mode is set to ModGP
 	if(Mode == "ModGP"){
 		species <- strsplit(input_species, " ")[[1]][1]
 	}
 	
-	## Filename and data presence check
+	## File name and data presence check
 	FNAME <- file.path(Dir, paste0(species, ".RData"))
 	if(!Force & file.exists(FNAME)){
 		save_ls <- loadObj(FNAME)
@@ -34,8 +36,7 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	
 	## Function start
 	message("Starting GBIF data retrieval")
-	## GBIF ID Query ----
-	## GBIF query
+	## GBIF taxa Query ----
 	if(Mode == "ModGP"){
 		message(paste("## Resolving", species, "at genus level"))
 		RankGBIF <- "genus"
@@ -69,8 +70,10 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 													 pred("occurrenceStatus", "PRESENT"),
 													 format = "SIMPLE_CSV")
 	curlopts <- list(http_version = 2) # needed on Mac to avoid HTTP issues in next line (see here: https://github.com/ropensci/rgbif/issues/579)
-	occ_meta <- occ_download_wait(occ_down, status_ping = 30, 
-																curlopts = list(), quiet = FALSE) # wait for download to finish
+	occ_meta <- occ_download_wait(occ_down, 
+	                              status_ping = 30, 
+																curlopts = list(), 
+																quiet = FALSE) # wait for download to finish
 	occ_get <- occ_download_get(occ_down, path = Dir) # download data
 	curlopts <- list(http_version = 1) # resetting this to not affect other functions
 	
@@ -80,16 +83,20 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	
 	## Manipulating GBIF Data ----
 	### Resolving Common Issues ----
-	message("Resolving Common Data Issues")
+	message("Resolving Common Data Issues. Removing occurrences")
 	## removing bases of record that may not be linked to coordinates properly
+	message("... that may not be linked to coordinates properly")
 	occ_occ <- occ_occ[occ_occ$basisOfRecord %nin% c("PRESERVED_SPECIMEN", 
 	                                                 "MATERIAL_CITATION"), ]
 	## removing highly uncertain locations, i.e., anything more than 1km in uncertainty
+	message("... with >1km uncertainty")
 	occ_occ <- occ_occ[occ_occ$coordinateUncertaintyInMeters <= 1000, ]
 	## removing rounded coordinates
+	message("... with rounded coordinates")
 	occ_occ <- occ_occ[-grep(occ_occ$issue, 
 	                         pattern = "COORDINATE_ROUNDED"), ]
 	## removing empty species rows
+	message("... with empty species rows")
 	occ_occ <- occ_occ[occ_occ$species != "" & !is.na(occ_occ$species), ]
 	
 	### Parallel Set-Up ----
@@ -117,38 +124,49 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	message("Extracting species-level data into MULTIPOINT objects")
 	GBIF_specs <- unique(occ_occ$species)
 	
-	## Making a list of spatialfeatures MULTIPOINT objects denoting unique locations of presence per species
-	specs_ls <- pblapply(GBIF_specs, 
-											 cl = parallel,
-											 FUN = function(x){
-											 	spec_df <- occ_occ[occ_occ$species == x, ]
-											 	spec_uniloca <- occ_occ[occ_occ$species == x, 
-											 	                        c("species", 
-											 	                          "decimalLatitude",
-											 	                          "decimalLongitude")]
-											 	spec_df <- spec_df[!duplicated(spec_uniloca), 
-											 	                   c("gbifID", 
-											 	                     "datasetKey", 
-											 	                     "occurrenceID", 
-											 	                     "species", 
-											 	                     "scientificName", 
-											 	                     "speciesKey",
-											 										   "decimalLatitude", 
-											 										   "decimalLongitude",
-											 										   "coordinateUncertaintyInMeters",
-											 										   "eventDate", 
-											 										   "basisOfRecord", 
-											 										   "recordNumber", 
-											 										   "issue")]   											 	
-											 	spec_df$presence <- 1
-											 	st_as_sf(spec_df, 
-											 	         coords = c("decimalLongitude", 
-											 	                    "decimalLatitude"))
-											 })
+	##' Making a list of spatialfeatures MULTIPOINT objects 
+	##' denoting unique locations of presence per species
+	specs_ls <- pblapply(
+	  GBIF_specs,
+	  cl = parallel,
+	  FUN = function(x) {
+	    ## dataframe of occurrences
+	    spec_df <- occ_occ[occ_occ$species == x,]
+	    ## unique locations
+	    spec_uniloca <- occ_occ[occ_occ$species == x,
+	                            c("species",
+	                              "decimalLatitude",
+	                              "decimalLongitude")]
+	    ## remove duplicates (of populations)
+	    spec_df <- spec_df[!duplicated(spec_uniloca),
+	                       c("gbifID",
+	                         "datasetKey",
+	                         "occurrenceID",
+	                         "species",
+	                         "scientificName",
+	                         "speciesKey",
+	                         "decimalLatitude",
+	                         "decimalLongitude",
+	                         "coordinateUncertaintyInMeters",
+	                         "eventDate",
+	                         "basisOfRecord",
+	                         "recordNumber",
+	                         "issue"
+	                       )]
+	    spec_df$presence <- 1
+	    st_as_sf(spec_df,
+	             coords = c("decimalLongitude",
+	                        "decimalLatitude"))
+	  }
+	)
 	names(specs_ls) <- GBIF_specs
 	
 	## Making list into single data frame when Capfitogen mode is toggled on.
+	# HJ: section below to create a Capfitogen data frame not used
+	# species data included as the sf file created above
 	if(Mode == "Capfitogen"){
+	  message("Making data for Capfitogen mode")
+	  message(FNAME)
 		specs_ls <- specs_ls[[1]]
 		## create capfitogen data frame
 		CapfitogenColumns <- c("INSTCODE", 
@@ -168,10 +186,15 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 		                       "ACQDATE", 
 		                       "ORIGCTY", 
 		                       "NAMECTY", 
-		                       "ADM1", "ADM2", "ADM3", "ADM4", 
+		                       "ADM1", 
+		                       "ADM2", 
+		                       "ADM3", 
+		                       "ADM4", 
 		                       "COLLSITE", 
-		                       "DECLATITUDE", "LATITUDE", 
-		                       "DECLONGITUDE", "LONGITUDE", 
+		                       "DECLATITUDE", 
+		                       "LATITUDE", 
+		                       "DECLONGITUDE", 
+		                       "LONGITUDE", 
 		                       "COORDUNCERT", 
 		                       "COORDDATUM", 
 		                       "GEOREFMETH", 
@@ -196,18 +219,22 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 		                                    ncol = length(CapfitogenColumns)))
 		colnames(CapfitogenData) <- CapfitogenColumns
 		## Create unique rownames for the ACCENUMB
-		CapfitogenData$ACCENUMB <- seq(from = 1, to = nrow(CapfitogenData), by = 1)
+		CapfitogenData$ACCENUMB <- seq(from = 1, 
+		                               to = nrow(CapfitogenData), 
+		                               by = 1)
 		## Add in the species, latitude and longitude (nothing else at this point)
 		CapfitogenData$SPECIES <- specs_ls$species
 		CapfitogenData$DECLATITUDE <- st_coordinates(specs_ls)[,"Y"]
 		CapfitogenData$DECLONGITUDE <- st_coordinates(specs_ls)[,"X"]
-		specs_ls <- CapfitogenData
+		specs_ls_capfitogen <- CapfitogenData
 	}
 	
 	### Returning Object to Disk and Environment ----
+	ifelse(Mode == "Capfitogen",
+	       occs = specs_ls_capfitogen,
+	       occs = specs_ls)
 	save_ls <- list(meta = occ_meta,
-									occs = specs_ls
-									# ,
+									occs = occs
 									# json = JSON_ls
 									)
 	
@@ -215,27 +242,42 @@ FUN.DownGBIF <- function(species = NULL, # species name as character for whose g
 	unlink(occ_get) # removes .zip file
 	
 	### JSON RO-CRATE creation ----
+	message("Create .json RO-crate (research object) metadata")
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
 	
 	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
-	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste0("https://www.gbif.org/species/", tax_ID) # gbif ID
-	JSON_ls$`@graph`[[2]]$creator$`@id` <- c(JSON_ls$`@graph`[[2]]$creator$`@id`, as.character(options("gbif_email")))
-	JSON_ls$`@graph`[[2]]$author$`@id` <- c(JSON_ls$`@graph`[[2]]$author$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- paste0("https://www.gbif.org/species/", 
+	                                                 tax_ID) # gbif taxon ID
+	JSON_ls$`@graph`[[2]]$creator$`@id` <- c(JSON_ls$`@graph`[[2]]$creator$`@id`, 
+	                                         as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[2]]$author$`@id` <- c(JSON_ls$`@graph`[[2]]$author$`@id`, 
+	                                        as.character(options("gbif_email")))
 	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time()
-	JSON_ls$`@graph`[[2]]$name <- paste("Cleaned GBIF occurrence records for", RankGBIF, species)
-	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", "Occurrence", "Biodiversity", "Observation", Mode)
-	JSON_ls$`@graph`[[2]]$description <- paste(Mode, "input data for", species)
+	JSON_ls$`@graph`[[2]]$name <- paste("Cleaned GBIF occurrence records for", 
+	                                    RankGBIF, species)
+	JSON_ls$`@graph`[[2]]$keywords <- list("GBIF", 
+	                                       "Occurrence", 
+	                                       "Biodiversity", 
+	                                       "Observation", 
+	                                       Mode)
+	JSON_ls$`@graph`[[2]]$description <- paste(Mode, 
+	                                           "input data for", 
+	                                           species)
 	
 	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
 	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
 	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
 	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
 	
-	JSON_ls$`@graph`[[4]]$name <- c(as.character(options("gbif_user")), JSON_ls$`@graph`[[4]]$name)
-	JSON_ls$`@graph`[[4]]$`@id` <- c(JSON_ls$`@graph`[[4]]$`@id`, as.character(options("gbif_email")))
-	JSON_ls$`@graph`[[4]]$`@type` <- c(JSON_ls$`@graph`[[4]]$`@type`, "Organisation")
+	JSON_ls$`@graph`[[4]]$name <- c(as.character(options("gbif_user")), 
+	                                JSON_ls$`@graph`[[4]]$name)
+	JSON_ls$`@graph`[[4]]$`@id` <- c(JSON_ls$`@graph`[[4]]$`@id`, 
+	                                 as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[4]]$`@type` <- c(JSON_ls$`@graph`[[4]]$`@type`, 
+	                                   "Organisation")
 	
-	JSON_ls$`@graph`[[5]]$agent$`@id` <- c(JSON_ls$`@graph`[[5]]$agent$`@id`, as.character(options("gbif_email")))
+	JSON_ls$`@graph`[[5]]$agent$`@id` <- c(JSON_ls$`@graph`[[5]]$agent$`@id`, 
+	                                       as.character(options("gbif_email")))
 	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
 	
 	con <- file(file.path(Dir, paste0(species, ".json")))
@@ -260,13 +302,17 @@ FUN.DownBV <- function(
 	if(!Force & file.exists(FNAME)){
 		BV_ras <- stack(FNAME)
 		names(BV_ras) <- paste0("BIO", 1:19)
-		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		message("Data has already been downloaded with these specifications. 
+		        It has been loaded from the disk. If you wish to override 
+		        the present data, please specify Force = TRUE")
 		return(BV_ras)
 	}
 	
 	### Raw soil moisture level data ----
-	#' We download raw soil moisture data for layers 1 (0-7cm) and 2 (7-28cm) separately. 
-	#' These are then summed up and used in the bioclimatic variable computation of KrigR
+	#' We download raw soil moisture data for 
+	#' layers 1 (0-7cm) and 2 (7-28cm) separately. 
+	#' These are then summed up and used in the 
+	#' bioclimatic variable computation of KrigR
 	FNAME_RAW <- file.path(Dir, paste(tools::file_path_sans_ext(basename(FNAME)), 
 						   "volumetric_soil_water_layer_1", "RAW.nc", sep = "_"))
 	if(!file.exists(FNAME_RAW)) {
@@ -331,6 +377,17 @@ FUN.DownBV <- function(
 		API_Key = API_Key
 	)
 	
+	# ### Masking ---- 
+	# Land_sp <- ne_countries(type = "countries", scale = "medium")
+	# BV_ras <- crop(BV_ras, extent(Land_sp))
+	# BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
+	# BV_ras <- mask(BV_ras, BV_mask)
+	# 
+	# ### Saving ----
+	# writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
+	# unlink(file.path(Dir, "Qsoil_BC.nc"))
+	# names(BV_ras) <- paste0("BIO", 1:19)
+	
 	### JSON RO-CRATE creation ----
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
 	
@@ -344,7 +401,8 @@ FUN.DownBV <- function(
 	                                       "ECMWF", 
 	                                       "Bioclimatic Variables", 
 	                                       "Soil Moisture")
-	JSON_ls$`@graph`[[2]]$description <- "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+	JSON_ls$`@graph`[[2]]$description <- 
+	  "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
 	
 	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
 	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
@@ -356,10 +414,12 @@ FUN.DownBV <- function(
 	con <- file(file.path(Dir, 
 	                      paste0(tools::file_path_sans_ext(basename(FNAME)), 
 	                             ".json")))
-	writeLines(jsonlite::toJSON(JSON_ls, 
-	                            pretty = TRUE), 
+	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), 
 	           con)
 	close(con)
+	
+	message(paste0("ERA5 citation:\nCopernicus Climate Change Service, Climate Data Store, (2024): ERA5-land post-processed daily-statistics from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.e9c9c792 ",
+	               "(Accesed on ", Sys.Date(),")"))
 	
 	BV_ras
 }
@@ -389,9 +449,15 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
     soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
     #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
     #' NB! Each global map occupies circa 5 GB! It takes a while to download.
-    #' in addition, https://files.isric.org/soilgrids/latest/data/wrb/
+    #' In addition, https://files.isric.org/soilgrids/latest/data/wrb/
     #' has maps of soil types, as estimated probability of occurrence per type.
     #' MostProbable.vrt has the most probable soil type per gridcell.
+    #' Soil salinity: https://data.isric.org/geonetwork/srv/eng/catalog.search#/metadata/c59d0162-a258-4210-af80-777d7929c512
+    #' Processing HWSD v2 in R (tutorial)
+    #' Technical note Processing the Harmonized World Soil Database (Version 2.0) in R, by David Rossiter https://www.isric.org/sites/default/files/R_HWSD2.pdf
+    #' HWSDv2 SQLite data set (accompanies HWSD v2 in R tutorial)
+    #' This is an SQLite version of HWSD ver. 2.0 for use with the tutorial prepared by David Rossiter. https://www.isric.org/sites/default/files/HWSD2.sqlite 
+    
     SoilGrids_variables_in <- c(
       "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
        "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
@@ -425,7 +491,7 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
     names(EV_stack) <- c("Nutrient", 
                        "Toxicity", 
                        SoilGrids_variables)
-  
+    
     ## resample to match a provided raster object's origin and resolution
     if(!resample_to_match){
       EV_stack <- raster::resample(HSWD_PH_stack, # rasters to be resampled
