@@ -77,7 +77,9 @@ Species_ls <- FUN.DownGBIF(
 )
 
 ## Environmental Data -----------------------------------------------------
-##' Bioclomatic data: 19 BioClim variables
+### Bioclomatic data ------
+##' 19 BioClim variables
+##' FUN.DownBV uses KrigR to download ERA5 data from Climate Data Store (CDS)
 ##' is each file of each variable >20GB? 
 ##' Will this download Global Multi-resolution Terrain Elevation Data (GMTED2010) as well?
 ##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
@@ -89,32 +91,10 @@ bioclim_data <- FUN.DownBV(
   Force = FALSE # do not overwrite already present data
   )
 
-## Edaphic data: 
-message("Retrieving edaphic variables")
-edaphic_data <- FUN.DownEV(
-  Dir = Dir.Data.Envir,
-  Force = FALSE,
-  #resample_to_match = bioclim_data[[1]]
-)
-
-# biocl_ras <- FUN.DownBV(T_Start = 1985, # what year to begin climatology calculation in
-#                      T_End = 2015, # what year to end climatology calculation in
-#                      Dir = Dir.Data.Envir, # where to store the data output on disk
-#                     Force = FALSE # do not overwrite already present data
-# )
-# 
-# # Edaphic data
-
-# edaph_ras <- FUN.DownEV("soc", "silt", "sand") # TO DO
-
-#geophy_ras <- FUN.DownGV( ) # TO DO
-
-## read variables --------------------------------------------------------
-bioclim_ras <- terra::rast(file.path(Dir.Data.Envir, 
-                                     "BV_1985-2015.nc"))
-bioclim_ras <- terra::project(bioclim_ras, 
-                              "EPSG:4326") # WGS84; World Geodetic System 1984
-BioClim_names <- c( ## BioClim variable names, see https://www.worldclim.org/data/bioclim.html
+bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
+#bioclim_variables <- terra::project(bioclim_variables, "EPSG:4326") # WGS84
+BioClim_names <- c( 
+  ## BioClim variable names, see https://www.worldclim.org/data/bioclim.html
   "BIO1_Annual_Mean_Temperature",
   "BIO2_Mean_Diurnal_Range",
   "BIO3_Isothermality",
@@ -134,8 +114,19 @@ BioClim_names <- c( ## BioClim variable names, see https://www.worldclim.org/dat
   "BIO17_Precipitation_of_Driest_Quarter",
   "BIO18_Precipitation_of_Warmest_Quarter",
   "BIO19_Precipitation_of_Coldest_Quarter")
-names(bioclim_ras) <- BioClim_names
+names(bioclim_variables) <- BioClim_names
 
+### Edaphic data ------ 
+message("Downloading new or loading existing edaphic variables")
+source(file.path(Dir.R_scripts, "SHARED-Data.R"))
+
+edaphic_data <- FUN.DownEV(
+  Dir = Dir.Data.Envir,
+  Force = FALSE,
+  resample_to_match = bioclim_variables[[1]]
+)
+
+### Geophysical data ------
 
 geophys_ras <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
 
@@ -180,7 +171,7 @@ source(file.path(Dir.R_scripts, "VarSelection.R")) # complete HJs version, or im
 
 message("Selecting variables")
 bioclim_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls, #
-                                       varstack = bioclim_ras)
+                                       varstack = bioclim_variables)
                                       # buf = 2 # HJ: buffer doesn't work properly with terra, gets stuck?
 
 

@@ -30,7 +30,7 @@ FUN.DownGBIF <- function(
 	FNAME <- file.path(Dir, paste0(species, ".RData"))
 	if(!Force & file.exists(FNAME)){
 		save_ls <- loadObj(FNAME)
-		message("Data has already been downloaded with these specifications previously. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
+		message("Data has already been downloaded with these specifications. It has been loaded from the disk. \nIf you wish to override the present data, please specify Force = TRUE")
 		return(save_ls)
 	}
 	
@@ -371,12 +371,15 @@ FUN.DownBV <- function(
 		Water_Type = "monthly_averaged_reanalysis",
 		Y_start = T_Start, Y_end = T_End,
 		Extent = ne_countries(type = "countries", scale = "medium")[,1],
-		Dir = Dir, FileName = basename(FNAME),
-		FileExtension = ".nc", Compression = 9, # file storing
+		Dir = Dir, 
+		FileName = basename(FNAME),
+		FileExtension = ".nc", 
+		Compression = 9,
 		API_User = API_User,
 		API_Key = API_Key
 	)
 	
+	# Not sure if this should be in the code or not. 
 	# ### Masking ---- 
 	# Land_sp <- ne_countries(type = "countries", scale = "medium")
 	# BV_ras <- crop(BV_ras, extent(Land_sp))
@@ -419,7 +422,7 @@ FUN.DownBV <- function(
 	close(con)
 	
 	message(paste0("ERA5 citation:\nCopernicus Climate Change Service, Climate Data Store, (2024): ERA5-land post-processed daily-statistics from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.e9c9c792 ",
-	               "(Accesed on ", Sys.Date(),")"))
+	               "(Accessed on ", Sys.Date(),")"))
 	
 	BV_ras
 }
@@ -445,7 +448,7 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
   # if the file doesn't already exist:
     ## downloading data from SoilGrids
   if(!file.exists(FNAME)){
-    message("Start downloading data from SoilGrids")
+    message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
     soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
     #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
     #' NB! Each global map occupies circa 5 GB! It takes a while to download.
@@ -470,18 +473,46 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
        "ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
        "ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
        "soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+    
     SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
-    soilGrids_data <- stack()
-    for (i in length(SoilGrids_variables_in)) {
-      variable_name = SoilGrids_variables[]
-      soilGrids_data[[i]] <- gdal_translate(
-        src_dataset = paste0(soilGrids_url, SoilGrids_variables_in[i], ".vrt"), # input to be downloaded
-        dst_dataset = paste0(Dir.Data.Envir, "/", SoilGrids_variables[i], ".tif"), # output file
-        tr = c(2500,2500) # target resolution 
+    
+    soilGrids_data <- raster::stack()
+    
+    for (i in 1:length(SoilGrids_variables_in)) {
+      
+      variable_name = SoilGrids_variables[i]
+      
+      message(SoilGrids_variables[i])
+      
+      downloaded_variable <- gdal_translate(
+        # input to be downloaded
+        src_dataset = paste0(soilGrids_url, SoilGrids_variables_in[i], ".vrt"),
+        # output file
+        dst_dataset = paste0(Dir.Data.Envir, "/", SoilGrids_variables[i], ".tif"),
+        # target resolution
+        tr = c(2500, 2500) 
       )
+      
+      downloaded_raster <- raster(downloaded_variable)
+      
+      ## if provided, resample to match another raster object's origin and resolution
+      if (!missing(resample_to_match)) {
+        message(paste0("resampling raster to match ", names(resample_to_match)))
+        resample_to_match <- raster(resample_to_match)
+
+        ## project SoilGrids raster to match resample_to_match file
+        projection_to_match <- proj4string(resample_to_match)
+        raster::projection(downloaded_raster) <- projection_to_match
+        
+        ## resample
+        downloaded_raster <- raster::resample(downloaded_raster, # raster to be resampled
+                                              resample_to_match) # raster with parameters to be resampled to
+      }
+      
+      soilGrids_data[i] <- downloaded_raster
     }
     ## downloading data from HSWD
-    message("Start downloading data from HSWD (harmonised world soil database)")
+    message("Downloading data from HSWD (harmonised world soil database) via fao.org")
     PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
     PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
     HSWD_PH_stack <- stack(PH_nutrient, PH_toxicity)
@@ -491,16 +522,12 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
     names(EV_stack) <- c("Nutrient", 
                        "Toxicity", 
                        SoilGrids_variables)
-    
-    ## resample to match a provided raster object's origin and resolution
-    if(!resample_to_match){
-      EV_stack <- raster::resample(HSWD_PH_stack, # rasters to be resampled
-                                   resample_to_match) # raster with parameters to be resampled to
-      }
   }
   
   ### Saving ----
-  terra::writeCDF(EV_stack, filename = FNAME, overwrite = FALSE)
+  terra::writeCDF(EV_stack, 
+                  filename = FNAME, 
+                  overwrite = FALSE)
   #unlink(file.path(Dir.Data.Envir, "Edaphic", "soil_world", "*.tif"))
   
   EV_stack
