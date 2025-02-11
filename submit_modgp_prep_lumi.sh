@@ -22,4 +22,4 @@ fi
 export R_TERRA_MAX_RAM_MB
 # End of workaround
 
-singularity run --bind $PWD cwr_0.5.0.sif "ModGP-run_prep.R" "$SPECIES"
+singularity run --bind $PWD cwr_0.5.1.sif "ModGP-run_prep.R" "$SPECIES"
