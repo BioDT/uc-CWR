@@ -190,6 +190,11 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 											 Dir = getwd(), # where to store the data output on disk
 											 Force = FALSE # do not overwrite already present data
 											 ){
+    # Workaround for Dir, 1/2
+    original_wd = getwd()
+    setwd(Dir)
+    # End of workaround
+
 	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
 	
 	if(!Force & file.exists(FNAME)){
@@ -283,6 +288,10 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
-	
+
+    # Workaround for Dir, 2/2
+    setwd(original_wd)
+    # End of workaround
+
 	BV_ras
 }
