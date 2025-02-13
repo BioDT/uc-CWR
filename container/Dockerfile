@@ -159,7 +159,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     export R_REMOTES_NO_ERRORS_FROM_WARNINGS="true" && \
     # dependencies=FALSE so that RcppArmadillo doesn't get reinstalled
-    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="eea083d6d4b90d62fb19c5570d85cd8664e08f60", dependencies=FALSE)' && \
+    Rscript -e 'devtools::install_github("ErikKusch/KrigR", ref="760f3cb9c89784f04bea94830279fe2347ecb7ce", dependencies=FALSE)' && \
     /conda/bin/conda clean -afy
 
 # Install remaining sdm dependencies (should be none)
