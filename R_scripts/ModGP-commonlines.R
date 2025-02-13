@@ -33,7 +33,7 @@ package_vec <- c(
 sapply(package_vec, install.load.package)
 
 ### NON-CRAN PACKAGES ----
-if(packageVersion("KrigR") < "0.9.5"){ # KrigR check
+if(packageVersion("KrigR") < "0.9.6"){ # KrigR check
 	devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
 }
 library(KrigR)
