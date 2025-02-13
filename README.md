@@ -14,7 +14,7 @@
 
 2. Fetch the container:
 
-       singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.5.1
+       singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.5.2
 
 3. Submit calculation job for a desired species (e.g. Lathyrus):
 
