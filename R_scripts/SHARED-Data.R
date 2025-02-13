@@ -283,6 +283,6 @@ FUN.DownBV <- function(T_Start = 1970, # what year to begin climatology calculat
 	con <- file(file.path(Dir, paste0(tools::file_path_sans_ext(basename(FNAME)), ".json")))
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
-	
+
 	BV_ras
 }
