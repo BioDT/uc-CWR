@@ -36,7 +36,7 @@ srun --overlap --cpu-bind=none --mpi=none hq worker start \
 hq worker wait "$SLURM_NTASKS"
 
 # Submit different subspecies of the given species in parallel to the exec function in parallel
-hq submit --each-line species_list.txt bash -c 'singularity run --bind $PWD cwr_0.5.2.sif "ModGP-run_exec.R" "$HQ_ENTRY"'
+hq submit --each-line species_list.txt bash -c 'singularity run --bind $PWD cwr_0.5.3.sif "ModGP-run_exec.R" "$HQ_ENTRY"'
 
 # Wait for all tasks to finish
 hq job wait all
