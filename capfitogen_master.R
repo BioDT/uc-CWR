@@ -91,6 +91,7 @@ bioclim_data <- FUN.DownBV(
   Force = FALSE # do not overwrite already present data
   )
 
+#test <- terra::rast("Data/Environment/TEMP_2m_temperature_00001")
 bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
 #bioclim_variables <- terra::project(bioclim_variables, "EPSG:4326") # WGS84
 BioClim_names <- c( 
@@ -117,13 +118,14 @@ BioClim_names <- c(
 names(bioclim_variables) <- BioClim_names
 
 ### Edaphic data ------ 
-message("Downloading new or loading existing edaphic variables")
+##' NB! each file at 250x250m is ~20GB...
+message("Downloading new or loading existing edaphic/soil variables")
 source(file.path(Dir.R_scripts, "SHARED-Data.R"))
 
 edaphic_data <- FUN.DownEV(
   Dir = Dir.Data.Envir,
-  Force = FALSE,
-  resample_to_match = bioclim_variables[[1]]
+  Force = FALSE#,
+  #resample_to_match = bioclim_variables[[1]]
 )
 
 ### Geophysical data ------

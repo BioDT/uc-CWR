@@ -297,6 +297,12 @@ FUN.DownBV <- function(
 		Dir = getwd(), # where to store the data output on disk
 		Force = FALSE # do not overwrite already present data
 		){
+  
+  # Workaround for Dir, 1/2
+  # original_wd = getwd()
+  # setwd(Dir)
+  # End of workaround
+  
 	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
 	
 	if(!Force & file.exists(FNAME)){
@@ -424,6 +430,10 @@ FUN.DownBV <- function(
 	message(paste0("ERA5 citation:\nCopernicus Climate Change Service, Climate Data Store, (2024): ERA5-land post-processed daily-statistics from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.e9c9c792 ",
 	               "(Accessed on ", Sys.Date(),")"))
 	
+	# Workaround for Dir, 2/2
+#	setwd(original_wd)
+	# End of workaround
+	
 	BV_ras
 }
 
@@ -451,32 +461,30 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
     message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
     soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
     #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
-    #' NB! Each global map occupies circa 5 GB! It takes a while to download.
+    #' NB! Each global map occupies circa 20 GB for 250x20m resolution! 
+    #' It takes a while to download.
     #' In addition, https://files.isric.org/soilgrids/latest/data/wrb/
     #' has maps of soil types, as estimated probability of occurrence per type.
     #' MostProbable.vrt has the most probable soil type per gridcell.
     #' Soil salinity: https://data.isric.org/geonetwork/srv/eng/catalog.search#/metadata/c59d0162-a258-4210-af80-777d7929c512
-    #' Processing HWSD v2 in R (tutorial)
-    #' Technical note Processing the Harmonized World Soil Database (Version 2.0) in R, by David Rossiter https://www.isric.org/sites/default/files/R_HWSD2.pdf
-    #' HWSDv2 SQLite data set (accompanies HWSD v2 in R tutorial)
-    #' This is an SQLite version of HWSD ver. 2.0 for use with the tutorial prepared by David Rossiter. https://www.isric.org/sites/default/files/HWSD2.sqlite 
-    
+   
     SoilGrids_variables_in <- c(
-      "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
+       "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
        "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
        "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
-       "silt/silt_0-5cm_mean", # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
-       "clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
-       "sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
-       "nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
-       "phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
-       "ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
-       "ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
-       "soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+       "silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
+       #"clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
+       #"sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
+       #"nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
+       #"phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
+       #"ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
+       #"ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
+       #"soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
     
     SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
     
-    soilGrids_data <- raster::stack()
+    #soilGrids_data <- raster::stack() # try list instead, rasters have different extents
+    soilGrids_data <- list()
     
     for (i in 1:length(SoilGrids_variables_in)) {
       
@@ -484,15 +492,23 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
       
       message(SoilGrids_variables[i])
       
-      downloaded_variable <- gdal_translate(
-        # input to be downloaded
-        src_dataset = paste0(soilGrids_url, SoilGrids_variables_in[i], ".vrt"),
-        # output file
-        dst_dataset = paste0(Dir.Data.Envir, "/", SoilGrids_variables[i], ".tif"),
-        # target resolution
-        tr = c(2500, 2500) 
+      path_to_downloaded_file <- paste0(Dir.Data.Envir, "/", 
+                                        SoilGrids_variables[i], ".tif")
+      
+      # if variable is not downloaded already, ...
+      ifelse(!file.exists(path_to_downloaded_file),
+             # download it, ...
+             downloaded_variable <- gdalUtilities::gdal_translate(
+               src_dataset = paste0(soilGrids_url, 
+                                    SoilGrids_variables_in[i], ".vrt"),
+               dst_dataset = path_to_downloaded_file,
+               tr = c(250, 250) # target resolution
+             ),
+             # or else load it from file
+             downloaded_variable <- path_to_downloaded_file
       )
       
+      ## load variable as raster
       downloaded_raster <- raster(downloaded_variable)
       
       ## if provided, resample to match another raster object's origin and resolution
@@ -510,25 +526,39 @@ FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
       }
       
       soilGrids_data[i] <- downloaded_raster
+      message(extent(soilGrids_data[[i]]))
     }
-    ## downloading data from HSWD
-    message("Downloading data from HSWD (harmonised world soil database) via fao.org")
-    PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
-    PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
-    HSWD_PH_stack <- stack(PH_nutrient, PH_toxicity)
+    # ## downloading data from HSWD
+    #' Technical note Processing the Harmonized World Soil Database (Version 2.0) in R, by David Rossiter https://www.isric.org/sites/default/files/R_HWSD2.pdf
+    #' HWSDv2 SQLite data set (accompanies HWSD v2 in R tutorial)
+    #' This is an SQLite version of HWSD ver. 2.0 for use with the tutorial prepared by David Rossiter. https://www.isric.org/sites/default/files/HWSD2.sqlite 
     
-    ## combine and rename rasters
-    EV_stack <- stack(HSWD_PH_stack, soilGrids_data)
-    names(EV_stack) <- c("Nutrient", 
-                       "Toxicity", 
-                       SoilGrids_variables)
+    # message("Downloading data from HSWD (harmonised world soil database) via fao.org")
+    # PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+    # PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+    # #HSWD_PH_stack <- stack(PH_nutrient, PH_toxicity)
+    # HSWD_PH_stack <- list(PH_nutrient, PH_toxicity)
+    # 
+    # ## combine and rename rasters
+    # EV_stack <- #stack(HSWD_PH_stack, soilGrids_data)
+    #   c(HSWD_PH_stack, soilGrids_data)
+    # names(EV_stack) <- c("Nutrient", 
+    #                    "Toxicity", 
+    #                    SoilGrids_variables)
+    
+    # EV_stack <- stack(unlist(soilGrids_data)) # stacking not possible with rasters of different extent
+    # names(EV_stack) <- SoilGrids_variables
   }
   
   ### Saving ----
-  terra::writeCDF(EV_stack, 
-                  filename = FNAME, 
+  message("save as RData")
+  saveRDS(soilGrids_data,
+          paste0(Dir.Data.Envir, "/edaphic_data_temp.RData"))
+  
+  message("try saving as nc")
+  terra::writeCDF(EV_stack,
+                  filename = FNAME,
                   overwrite = FALSE)
-  #unlink(file.path(Dir.Data.Envir, "Edaphic", "soil_world", "*.tif"))
   
   EV_stack
   
