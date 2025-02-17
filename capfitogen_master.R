@@ -129,20 +129,15 @@ edaphic_variables <- FUN.DownEV(
 
 ### Geophysical data ------
 
-geophys_ras <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
+geophysical_variables <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
 
-# geophys_ras <- terra::project(geophys_ras, "EPSG:4326")
-# names(geophys_ras) <- geophysv
-# edaph_ras <- terra::rast(file.path(Dir.Data.Envir, "edaph.nc"))
-# names(edaph_ras) <- edaphv
-
-
-# 
+ 
 
 # CAPFITOGEN pipeline =========================================================
 ## Parameters -----------------------------------------------------------------
-## copied and shortened from CAPFITOGEN's "Parameters_SelecVar.R" script.
-# ruta <- "C:/CAPFITOGEN3" # replace with other paths
+## copied and shortened from CAPFITOGEN scripts. 
+## TO to: DELETE UNNECESSARY PARAMS
+
 extent <- pais <- "World"
 pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
 geoqual <- FALSE # ?
@@ -165,27 +160,25 @@ ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in t
 resultados <- Dir.Results # directory to place results
 
 
-## Variable selection: SelecVar ------------------------------------------------
-#' run variable selection (script VarSelection.R for each category of environmental variables):
-#' 
-source(file.path(Dir.R_scripts, "VarSelection.R")) # complete HJs version, or implement original CAPFITOGEN solution with some additional code before/after?
-
-message("Selecting variables")
-bioclim_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls, #
-                                       varstack = bioclim_variables)
-                                      # buf = 2 # HJ: buffer doesn't work properly with terra, gets stuck?
 
 
-geophys_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls
-                                       varstack = geophys_ras)
-                                      # buf = 2 # HJ: buffer doesn't work properly with terra, gets stuck?
+## Variable selection ---------------------------------------------------------
+# run variable selection based on variable inflation factor usdm::vif
 
-edaph_ext <- FUN.VarSelection(specdata = Species_ls$occs, #occ_ls
-                                  varstack = edaph_ras
-                                  # buf = 2 # HJ: buffer doesn't work properly with terra, gets stuck?
-                                  )
+all_predictors <- c(bioclim_variables, edaphic_variables)#, geophysical_variables
 
-#results <- "results/SelectVar"
+predictors <-
+  vifcor(
+    bioclim_variables,# replace with either BV, EV, GV to run separately per type
+    th = 0.9, # threshold of correlation
+    keep = NULL, # if wanted, list variables to keep no matter what
+    size = 1000, # subset size in case of big data (default 5000)
+    method = "pearson" # 'pearson','kendall','spearman'
+  )
+
+
+
+
 
 ## Clustering and map creation: ELCmapas ---------------------------------------
 message("Clustering and creating maps")

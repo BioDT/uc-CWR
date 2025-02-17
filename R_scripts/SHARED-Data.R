@@ -595,11 +595,22 @@ FUN.DownGV <-
     
     # if the file doesn't already exist:
     if (!file.exists(FNAME)) {
+      ## Download digital elevation model (DEM) from 
+      ##' Jarvis A., H.I. Reuter, A. Nelson, E. Guevara, 2008, Hole-filled 
+      ##' seamless SRTM data V4, International Centre for Tropical Agriculture 
+      ##' (CIAT), available from http://srtm.csi.cgiar.org.
+      #dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
+      
+      ## Download CHILI: Continuous Heat-Insolation Load Index
+      ##' Theobald, D. M., Harrison-Atlas, D., Monahan, W. B., & Albano, C. M. 
+      ##' (2015). Ecologically-relevant maps of landforms and physiographic 
+      ##' diversity for climate adaptation planning. PloS one, 10(12), e0143619
+      insolation_index <- rast("")
       
       
     }
     
-
+    
 
   
   ### Saving ----
@@ -609,4 +620,50 @@ FUN.DownGV <-
 
   geophysical_raster
   
-}
+  }
+
+# WGS84 = EPSG:4326
+
+install.packages("reticulate") # python environment - https://rstudio.github.io/reticulate/
+install.packages("rgeedim") # search and download Google Earth Engine imagery with Python
+
+library(reticulate)
+
+virtualenv_create(envname = "uc_CWR", # saved under /Documents/.virtualenvs/uc_CWR
+                  packages = c("numpy","geedim"),
+                  python = "C:/Program Files/Python3.10/python.exe"
+)
+
+virtualenv_list()
+
+use_virtualenv("uc_CWR")
+
+library(rgeedim)
+
+names(geedim()$enums)
+
+chili_img_id <- gd_image_from_id('CSP/ERGo/1_0/Global/ALOS_CHILI')
+
+chili <-  
+  gd_download(chili_img_id,
+    filename = 'chili.tif',
+    resampling = "bilinear",
+    scale = 2500, # scale=10: request ~10m resolution
+    overwrite = TRUE,
+    silent = FALSE
+  )
+
+
+x <- 'CSP/ERGo/1_0/US/CHILI' |>
+  gd_image_from_id() |>
+  gd_download(
+    filename = 'image.tif',
+    region = r,
+    crs = "EPSG:5070",
+    resampling = "bilinear",
+    scale = 1000, # scale=10: request ~10m resolution
+    overwrite = TRUE,
+    silent = FALSE
+  )
+
+
