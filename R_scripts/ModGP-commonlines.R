@@ -66,7 +66,7 @@ sapply(package_vec, install.load.package)
 
 ### NON-CRAN PACKAGES ----
 # check if KrigR is missing or outdated 
-if(packageVersion("KrigR") < "0.9.5" ||
+if(packageVersion("KrigR") < "0.9.6.1" ||
    "KrigR" %in% rownames(installed.packages()) == FALSE) {
   message("installing KrigR from github.com/ErikKusch/KrigR")
   devtools::install_github("https://github.com/ErikKusch/KrigR",

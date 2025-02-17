@@ -118,14 +118,13 @@ BioClim_names <- c(
 names(bioclim_variables) <- BioClim_names
 
 ### Edaphic data ------ 
-##' NB! each file at 250x250m is ~20GB...
+## NB! each file at 250x250m is ~20GB...
 message("Downloading new or loading existing edaphic/soil variables")
-source(file.path(Dir.R_scripts, "SHARED-Data.R"))
 
-edaphic_data <- FUN.DownEV(
+edaphic_variables <- FUN.DownEV(
   Dir = Dir.Data.Envir,
-  Force = FALSE#,
-  #resample_to_match = bioclim_variables[[1]]
+  Force = TRUE,
+  resample_to_match = bioclim_variables[[1]]
 )
 
 ### Geophysical data ------

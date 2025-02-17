@@ -438,172 +438,175 @@ FUN.DownBV <- function(
 }
 
 ## EDAPHIC DATA DOWNLOAD ------------------------------------------------------
-# HJ: new part, INCOMPLETE!
-# EL: data also need to be changed to get the same resolution as the BioClim 
-# variables downloaded with FUN.DownBV
-
-FUN.DownEV <- function(Dir = getwd(), # where to store the data output on disk
-                       Force = FALSE, # do not overwrite already present data, 
-                       resample_to_match = FALSE){
-  # define a file name
-  FNAME <- file.path(Dir, "edaphic.nc")
-  
-  # check if file already exists and whether to overwrite
-  if(!Force & file.exists(FNAME)){
-    EV_ras <- stack(FNAME)
-    #names(EV_ras) <- paste0("BIO", 1:19) # replace with edaphic names vector
-    message("Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE")
-    return(EV_ras)
-  }
-  # if the file doesn't already exist:
-    ## downloading data from SoilGrids
-  if(!file.exists(FNAME)){
-    message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
-    soilGrids_url="/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
-    #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
-    #' NB! Each global map occupies circa 20 GB for 250x20m resolution! 
-    #' It takes a while to download.
-    #' In addition, https://files.isric.org/soilgrids/latest/data/wrb/
-    #' has maps of soil types, as estimated probability of occurrence per type.
-    #' MostProbable.vrt has the most probable soil type per gridcell.
-    #' Soil salinity: https://data.isric.org/geonetwork/srv/eng/catalog.search#/metadata/c59d0162-a258-4210-af80-777d7929c512
-   
-    SoilGrids_variables_in <- c(
-       "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
-       "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
-       "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
-       "silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
-       #"clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
-       #"sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
-       #"nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
-       #"phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
-       #"ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
-       #"ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
-       #"soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+# INCOMPLETE! Works for some variables, but the data set is incomplete.
+FUN.DownEV <-
+  function(Dir = getwd(), # where to store the data output on disk
+           Force = FALSE, # do not overwrite already present data,
+           resample_to_match = FALSE) {
+    # define a file name
+    FNAME <- file.path(Dir, "edaphic.nc")
     
-    SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
-    
-    #soilGrids_data <- raster::stack() # try list instead, rasters have different extents
-    soilGrids_data <- list()
-    
-    for (i in 1:length(SoilGrids_variables_in)) {
-      
-      variable_name = SoilGrids_variables[i]
-      
-      message(SoilGrids_variables[i])
-      
-      path_to_downloaded_file <- paste0(Dir.Data.Envir, "/", 
-                                        SoilGrids_variables[i], ".tif")
-      
-      # if variable is not downloaded already, ...
-      ifelse(!file.exists(path_to_downloaded_file),
-             # download it, ...
-             downloaded_variable <- gdalUtilities::gdal_translate(
-               src_dataset = paste0(soilGrids_url, 
-                                    SoilGrids_variables_in[i], ".vrt"),
-               dst_dataset = path_to_downloaded_file,
-               tr = c(250, 250) # target resolution
-             ),
-             # or else load it from file
-             downloaded_variable <- path_to_downloaded_file
+    # check if file already exists and whether to overwrite
+    if (!Force & file.exists(FNAME)) {
+      EV_ras <- stack(FNAME)
+      message(
+        "Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
       )
+      return(EV_ras)
+    }
+    # if the file doesn't already exist:
+    if (!file.exists(FNAME)) {
+      ## downloading data from SoilGrids
+      message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
+      soilGrids_url = "/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
       
-      ## load variable as raster
-      downloaded_raster <- raster(downloaded_variable)
+      #' overview of datasets: https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean
+      #' NB! Each global map occupies circa 20 GB for 250x20m resolution!
+      #' It takes a while to download.
+      #' In addition, https://files.isric.org/soilgrids/latest/data/wrb/
+      #' has maps of soil types, as estimated probability of occurrence per type.
+      #' MostProbable.vrt has the most probable soil type per gridcell.
+      #' Soil salinity: https://data.isric.org/geonetwork/srv/eng/catalog.search#/metadata/c59d0162-a258-4210-af80-777d7929c512
+      
+      SoilGrids_variables_in <- c(
+        "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
+        "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
+        "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
+        "silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
+      #"clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
+      #"sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
+      #"nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
+      #"phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
+      #"ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
+      #"ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
+      #"soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+      
+      SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
+      
+      soilGrids_data <- list()
+      
+      for (i in 1:length(SoilGrids_variables_in)) {
+        variable_name = SoilGrids_variables[i]
+        
+        message(SoilGrids_variables[i])
+        
+        path_to_downloaded_file <- paste0(Dir.Data.Envir, "/",
+                                          SoilGrids_variables[i], ".tif")
+        
+        # if variable is not downloaded already, ...
+        ifelse(
+          !file.exists(path_to_downloaded_file),
+          # download it, ...
+          downloaded_variable <- gdalUtilities::gdal_translate(
+            src_dataset = paste0(soilGrids_url,
+                                 SoilGrids_variables_in[i], ".vrt"),
+            dst_dataset = path_to_downloaded_file,
+            tr = c(250, 250) # target resolution
+          ),
+          # or else load it from file
+          downloaded_variable <- path_to_downloaded_file
+        )
+        
+        ## load variable as raster
+        downloaded_raster <- rast(downloaded_variable)
+
+        ## if provided, resample to match another raster object's origin and resolution
+        if (!missing(resample_to_match)) {
+          message(paste0("resampling raster to match ", names(resample_to_match)))
+          resample_to_match <- rast(resample_to_match)
+          
+          ## project downloaded rasters to match resample_to_match file
+          projection_to_match <- terra::crs(resample_to_match)
+          terra::crs(downloaded_raster) <- projection_to_match
+
+          ## resample
+          downloaded_raster <-
+            terra::resample(downloaded_raster,
+                            resample_to_match) 
+
+        }
+        
+        soilGrids_data[i] <- downloaded_raster
+        
+      }
+
+      ## download additional rasters from HSWD
+      message("Downloading data from HSWD (harmonised world soil database) via fao.org")
+      
+      PH_nutrient <-
+        rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+      
+      PH_toxicity <-           
+        rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
       
       ## if provided, resample to match another raster object's origin and resolution
       if (!missing(resample_to_match)) {
         message(paste0("resampling raster to match ", names(resample_to_match)))
-        resample_to_match <- raster(resample_to_match)
-
-        ## project SoilGrids raster to match resample_to_match file
-        projection_to_match <- proj4string(resample_to_match)
-        raster::projection(downloaded_raster) <- projection_to_match
+        resample_to_match <- rast(resample_to_match)
+        
+        ## project downloaded rasters to match resample_to_match file
+        projection_to_match <- terra::crs(resample_to_match)
+        terra::crs(PH_nutrient) <- projection_to_match
+        terra::crs(PH_toxicity) <- projection_to_match
         
         ## resample
-        downloaded_raster <- raster::resample(downloaded_raster, # raster to be resampled
-                                              resample_to_match) # raster with parameters to be resampled to
-      }
+        PH_nutrient <-
+          terra::resample(PH_nutrient,
+                          resample_to_match) 
+        
+        PH_toxicity <-
+          terra::resample(PH_toxicity,
+                          resample_to_match) 
       
-      soilGrids_data[i] <- downloaded_raster
-      message(extent(soilGrids_data[[i]]))
+      ## combine and rename rasters
+      EV_rasters <- rast(c(soilGrids_data, PH_nutrient, PH_toxicity))
+      names(EV_rasters) <- c(SoilGrids_variables, "Nutrient", "Toxicity")
+      
     }
-    # ## downloading data from HSWD
-    #' Technical note Processing the Harmonized World Soil Database (Version 2.0) in R, by David Rossiter https://www.isric.org/sites/default/files/R_HWSD2.pdf
-    #' HWSDv2 SQLite data set (accompanies HWSD v2 in R tutorial)
-    #' This is an SQLite version of HWSD ver. 2.0 for use with the tutorial prepared by David Rossiter. https://www.isric.org/sites/default/files/HWSD2.sqlite 
     
-    # message("Downloading data from HSWD (harmonised world soil database) via fao.org")
-    # PH_nutrient <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
-    # PH_toxicity <- raster("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
-    # #HSWD_PH_stack <- stack(PH_nutrient, PH_toxicity)
-    # HSWD_PH_stack <- list(PH_nutrient, PH_toxicity)
-    # 
-    # ## combine and rename rasters
-    # EV_stack <- #stack(HSWD_PH_stack, soilGrids_data)
-    #   c(HSWD_PH_stack, soilGrids_data)
-    # names(EV_stack) <- c("Nutrient", 
-    #                    "Toxicity", 
-    #                    SoilGrids_variables)
+    ### Saving ----
+    message(paste0("saving as netCDF:", FNAME))
+    terra::writeCDF(EV_rasters,
+                    filename = FNAME,
+                    overwrite = FALSE)
     
-    # EV_stack <- stack(unlist(soilGrids_data)) # stacking not possible with rasters of different extent
-    # names(EV_stack) <- SoilGrids_variables
+    EV_rasters
+    
   }
-  
-  ### Saving ----
-  message("save as RData")
-  saveRDS(soilGrids_data,
-          paste0(Dir.Data.Envir, "/edaphic_data_temp.RData"))
-  
-  message("try saving as nc")
-  terra::writeCDF(EV_stack,
-                  filename = FNAME,
-                  overwrite = FALSE)
-  
-  EV_stack
-  
 }
 
-### Masking ----
-# whole world
-#Land_sp <- ne_countries(type = "countries", scale = "medium")
+## GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
+FUN.DownGV <- 
+  function(Dir = getwd(), # where to store the data output on disk
+           Force = FALSE, # do not overwrite already present data,
+           resample_to_match = FALSE){
+  
+    # define a file name
+    FNAME <- file.path(Dir, "geophysical.nc")
+    
+    # check if file already exists and whether to overwrite
+    if (!Force & file.exists(FNAME)) {
+      GV_ras <- stack(FNAME)
+      message(
+        "Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
+      )
+      return(GV_ras)
+    }
+    
+    # if the file doesn't already exist:
+    if (!file.exists(FNAME)) {
+      
+      
+    }
+    
 
-# HJ: for testing/ to match previous Capfitogen tests: only Spain
-# HJ: this is an attempt to do the same thing with terra that was done with KrigR in ModGP (see below)
-# please switch back to KrigR is wanted/needed
-# Land_sp <- ne_states("Spain")
-# edaph_ras <- crop(edaph_ras, terra::ext(Land_sp))
-# edaph_ras <- terra::mask(edaph_ras, vect(Land_sp))
-# BV_ras <- crop(BV_ras, extent(Land_sp))
-# BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
-# BV_ras <- mask(BV_ras, BV_mask)
 
-# HJ: missing: data source, download function for .nc files, where to set the selected variables
-
-FUN.DownGV <- function(arg1, arg2){
-  
-  FNAME <- file.path(Dir.Data.Envir, "geophys.nc")
-  
-  evarg <- c(arg1, arg2)
-  geophys_ras <- ??? file.path(Dir.Data.Envir, "Geophysical")
-  
-  # whole world
-  #Land_sp <- ne_countries(type = "countries", scale = "medium")
-  # HJ: for testing/ to match previous Capfitogen tests: only Spain
-  # HJ: this is an attempt to do the same thing with terra that was done with KrigR in ModGP (see below)
-  # please switch back to KrigR is wanted/needed
-  Land_sp <- ne_states("Spain")
-  geophys_ras <- crop(geophys_ras, terra::ext(Land_sp))
-  geophys_ras <- terra::mask(geophys_ras, vect(Land_sp))
-  
-  # BV_ras <- crop(BV_ras, extent(Land_sp))
-  # BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
-  # BV_ras <- mask(BV_ras, BV_mask)
   
   ### Saving ----
-  terra::writeCDF(geophys_ras, filename = FNAME, overwrite = TRUE)
-  unlink(file.path(Dir.Data.Envir, "Geophysical")) 
-  
-  geophys_ras
+  terra::writeCDF(geophysical_raster, 
+                  filename = FNAME, 
+                  overwrite = TRUE)
+
+  geophysical_raster
   
 }
