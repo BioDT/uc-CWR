@@ -75,6 +75,7 @@ Logo/*
 *.out
 
 # Downloaded data
+R_scripts/ELCmapas.R
 CAPFITOGEN3/
 scripts/
 hq

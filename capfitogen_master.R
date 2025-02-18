@@ -129,43 +129,58 @@ edaphic_variables <- FUN.DownEV(
 
 ### Geophysical data ------
 
-geophysical_variables <- terra::rast(file.path(Dir.Data.Envir, "geophys.nc"))
-
- 
+geophysical_variables <- FUN.DownGV(
+  Dir = Dir.Data.Envir,
+  Force = FALSE,
+  resample_to_match = bioclim_variables[[1]]
+)
+  
+terra::res(geophysical_variables)
 
 # CAPFITOGEN pipeline =========================================================
+## Download CAPFITOGEN scripts and files --------------------------------------
+files_to_download <- c(
+  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R"
+)
+
+## download files in a for loop
+for (i in 1:length(files_to_download)) {
+  file_url = files_to_download[i]
+  temp <- tempfile()
+  download.file(file_url, temp)
+  file.copy(temp, 
+            paste0(Dir.R_scripts,"/", 
+                   substr(files_to_download[i], 
+                          95, nchar(files_to_download[i]))))
+  unlink(temp)
+}
+
 ## Parameters -----------------------------------------------------------------
 ## copied and shortened from CAPFITOGEN scripts. 
 ## TO to: DELETE UNNECESSARY PARAMS
 
-extent <- pais <- "World"
-pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
-geoqual <- FALSE # ?
+pais <- "World"
+#pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
+#geoqual <- FALSE # ?
 # totalqual<-60 #Only applies if geoqual=TRUE
 distdup <- 1 # distance threshold in km to remove duplicates from same population
-resol1 <- "Celdas 1x1 km aprox (30 arc-seg)" # resolution, change to 9x9
-buffy <- FALSE # buffer zone?
-# tamp <- 1000 #Only applies when buffy=TRUE
-bioclimv <- BioClim_names #c("tmean_1","vapr_annual","prec_1") # bioclimatic variables, altered by HJ with existing data
-edaphv <- c("s_silt","s_sand","s_soilwater_cap") #  edaphic variables (defaults from SOILGRIDS)
-geophysv <- c("alt","aspect") # geophysical variables
+resol1 <- "9x9km" # resolution, change to 9x9
+#buffy <- FALSE # buffer zone?
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
-percenRF <- 0.66 # percentage of variables that will be selected by Random Forest 
-percenCorr <- 0.33 # percentage of variables that will be selected by the analysis of bivariate correlations, which is executed after the selection by Random Forest (for example, if you wanted to select 1/3 of the total of variables by bivariate correlations, percenRF would be 0.33
-CorrValue <- 0.5 # correlation threshold value, above (in its positive form) or below (in its negative form) of which it is assumed that there is a correlation between two variables.
-pValue <- 0.05 # significance threshold value for bivariate correlations.
+#percenRF <- 0.66 # percentage of variables that will be selected by Random Forest 
+#percenCorr <- 0.33 # percentage of variables that will be selected by the analysis of bivariate correlations, which is executed after the selection by Random Forest (for example, if you wanted to select 1/3 of the total of variables by bivariate correlations, percenRF would be 0.33
+#CorrValue <- 0.5 # correlation threshold value, above (in its positive form) or below (in its negative form) of which it is assumed that there is a correlation between two variables.
+#pValue <- 0.05 # significance threshold value for bivariate correlations.
 nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
-ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
-resultados <- Dir.Results # directory to place results
-
-
-
+#ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
+resultados <- Dir.Results.ECLMap # directory to place results
+ruta <- Dir.Results.ECLMap
 
 ## Variable selection ---------------------------------------------------------
 # run variable selection based on variable inflation factor usdm::vif
 
-all_predictors <- c(bioclim_variables, edaphic_variables)#, geophysical_variables
+all_predictors <- c(bioclim_variables, edaphic_variables, geophysical_variables)
 
 predictors <-
   vifcor(
@@ -176,12 +191,29 @@ predictors <-
     method = "pearson" # 'pearson','kendall','spearman'
   )
 
-
-
-
-
 ## Clustering and map creation: ELCmapas ---------------------------------------
 message("Clustering and creating maps")
+
+# download ELC map creation script from https://github.com/HMauricioParra/Capfitogen
+elc_script_url = "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R"
+temp <- tempfile()
+download.file(elc_script_url, temp)
+file.copy(temp, paste0(Dir.R_scripts,"/ELCmapas.R"))
+unlink(temp)
+
+
+# Set additional parameters
+bioclimv <- BioClim_names #
+edaphv <- names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
+geophysv <- names(geophysical_variables) # geophysical variables
+
+maxg <- 10 # maximum number of clusters per component 
+
+metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
+iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
+
+# run the script
+source(file.path(Dir.R_scripts, "ELCmapas.R"))
 
 # inputs to clustering: extracted values after variable selection
 

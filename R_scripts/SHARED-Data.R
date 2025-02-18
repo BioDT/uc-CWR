@@ -576,11 +576,10 @@ FUN.DownEV <-
 }
 
 ## GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
-FUN.DownGV <- 
-  function(Dir = getwd(), # where to store the data output on disk
-           Force = FALSE, # do not overwrite already present data,
-           resample_to_match = FALSE){
-  
+FUN.DownGV <-
+  function(Dir = getwd(),# where to store the data output on disk
+           Force = FALSE,# do not overwrite already present data,
+           resample_to_match = FALSE) {
     # define a file name
     FNAME <- file.path(Dir, "geophysical.nc")
     
@@ -595,75 +594,109 @@ FUN.DownGV <-
     
     # if the file doesn't already exist:
     if (!file.exists(FNAME)) {
-      ## Download digital elevation model (DEM) from 
-      ##' Jarvis A., H.I. Reuter, A. Nelson, E. Guevara, 2008, Hole-filled 
-      ##' seamless SRTM data V4, International Centre for Tropical Agriculture 
-      ##' (CIAT), available from http://srtm.csi.cgiar.org.
-      #dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
       
-      ## Download CHILI: Continuous Heat-Insolation Load Index
-      ##' Theobald, D. M., Harrison-Atlas, D., Monahan, W. B., & Albano, C. M. 
-      ##' (2015). Ecologically-relevant maps of landforms and physiographic 
-      ##' diversity for climate adaptation planning. PloS one, 10(12), e0143619
-      insolation_index <- rast("")
+      message("downloading geophysical data")
       
+      geophysical_data <- list()
+      
+      ## Download digital elevation model (DEM) ------
+      ##' Fick, S.E. and R.J. Hijmans, 2017. WorldClim 2
+      ##' https://doi.org/10.1002/joc.5086
+      worldclim_dem_url = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_2.5m_elev.zip"
+      temp <- tempfile()
+      download.file(worldclim_dem_url, temp)
+      unzip(zipfile = temp,
+            exdir = Dir)
+      unlink(temp)
+      dem <- rast(paste0(Dir, "/wc2.1_2.5m_elev.tif"))
+      
+      
+      ## resample ------
+      ## if provided, resample to match another raster object's origin and resolution
+      if (!missing(resample_to_match)) {
+        message(paste0("resampling raster to match ", names(resample_to_match)))
+        resample_to_match <- rast(resample_to_match)
+        
+        ## project downloaded rasters to match resample_to_match file
+        projection_to_match <- terra::crs(resample_to_match)
+        terra::crs(dem) <- projection_to_match
+        
+        ## resample
+        dem <- terra::resample(dem,
+                               resample_to_match)
+        
+        
+      }
+      
+      geophysical_data[1] <- dem
       
     }
     
     
-
-  
-  ### Saving ----
-  terra::writeCDF(geophysical_raster, 
-                  filename = FNAME, 
-                  overwrite = TRUE)
-
-  geophysical_raster
-  
+    ## combine and rename rasters
+    geophysical_rasters <- rast(geophysical_data)
+    
+    ### Saving ----
+    terra::writeCDF(geophysical_rasters,
+                    filename = FNAME,
+                    overwrite = TRUE)
+    
+    geophysical_rasters
+    
   }
 
+
+
+
+
 # WGS84 = EPSG:4326
+## Download digital elevation model (DEM) from 
+##' Jarvis A., H.I. Reuter, A. Nelson, E. Guevara, 2008, Hole-filled 
+##' seamless SRTM data V4, International Centre for Tropical Agriculture 
+##' (CIAT), available from http://srtm.csi.cgiar.org.
+#dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
 
-install.packages("reticulate") # python environment - https://rstudio.github.io/reticulate/
-install.packages("rgeedim") # search and download Google Earth Engine imagery with Python
+### DRAFT: Google Earth Engine downloads. -------------------------------------
+#' Almost working, but missing user/project credentials and login. 
+#' See https://developers.google.com/earth-engine/guides/auth
+#' ee.Authenticate()
+#' ee.Initialize(project='my-project')
+# 
+# install.packages("reticulate") # python environment - https://rstudio.github.io/reticulate/
+# install.packages("rgeedim") # search and download Google Earth Engine imagery with Python
+# 
+# library(reticulate)
+# 
+# virtualenv_create(envname = "uc_CWR", # saved under /Documents/.virtualenvs/uc_CWR
+#                   packages = c("numpy","geedim"),
+#                   python = "C:/Program Files/Python3.10/python.exe"
+# )
+# 
+# virtualenv_list()
+# 
+# use_virtualenv("uc_CWR")
+# 
+# library(rgeedim)
+# 
+# names(geedim()$enums)
+# 
+# 
+# ## Download CHILI: Continuous Heat-Insolation Load Index
+# ##' Theobald, D. M., Harrison-Atlas, D., Monahan, W. B., & Albano, C. M. 
+# ##' (2015). Ecologically-relevant maps of landforms and physiographic 
+# ##' diversity for climate adaptation planning. PloS one, 10(12), e0143619
+# 
+# chili_img_id <- gd_image_from_id('CSP/ERGo/1_0/Global/ALOS_CHILI')
+# 
+# chili <-  
+#   gd_download(chili_img_id,
+#     filename = 'chili.tif',
+#     resampling = "bilinear",
+#     scale = 2500, # scale=10: request ~10m resolution
+#     overwrite = TRUE,
+#     silent = FALSE
+#   )
+# 
 
-library(reticulate)
-
-virtualenv_create(envname = "uc_CWR", # saved under /Documents/.virtualenvs/uc_CWR
-                  packages = c("numpy","geedim"),
-                  python = "C:/Program Files/Python3.10/python.exe"
-)
-
-virtualenv_list()
-
-use_virtualenv("uc_CWR")
-
-library(rgeedim)
-
-names(geedim()$enums)
-
-chili_img_id <- gd_image_from_id('CSP/ERGo/1_0/Global/ALOS_CHILI')
-
-chili <-  
-  gd_download(chili_img_id,
-    filename = 'chili.tif',
-    resampling = "bilinear",
-    scale = 2500, # scale=10: request ~10m resolution
-    overwrite = TRUE,
-    silent = FALSE
-  )
-
-
-x <- 'CSP/ERGo/1_0/US/CHILI' |>
-  gd_image_from_id() |>
-  gd_download(
-    filename = 'image.tif',
-    region = r,
-    crs = "EPSG:5070",
-    resampling = "bilinear",
-    scale = 1000, # scale=10: request ~10m resolution
-    overwrite = TRUE,
-    silent = FALSE
-  )
 
 
