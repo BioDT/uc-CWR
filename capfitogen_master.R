@@ -62,6 +62,7 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
       readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
   } # end of CDS API check
 }
+
 ## NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
   numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
@@ -133,8 +134,9 @@ edaphic_variables <- FUN.DownEV(
   resample_to_match = bioclim_variables[[1]]
 )
 
+edaphic_variables <- rast("Data/Environment/bdod_0-5cm_mean.tif")
+  
 ### Geophysical data ------
-
 geophysical_variables <- FUN.DownGV(
   Dir = Dir.Data.Envir,
   Force = FALSE,
@@ -151,6 +153,7 @@ download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/h
               destfile = "capfitogen-main.zip")
 unzip(zipfile = "capfitogen-main.zip")
 
+# define path to CAPFITOGEN folder
 Dir.Capfitogen = file.path(Dir.Base, "Capfitogen-main/")
 
 # make folder for storing error log
@@ -238,6 +241,8 @@ iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calcul
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 
+# visualise output
+
 # below added by HJ, I'm not sure what it does
 # bioclim_cl <- FUN.KmeansClust(ext_values = bioclim_ext, 
 #                               max_clusters = 8, 
@@ -255,4 +260,13 @@ source(file.path(Dir.Capfitogen,
 #                     geophys = geophys_cl)
 # 
 
+## Overlaying conservation maps "Complementa" ---------------------------------
+# set additional parameters
+#...
+
+# run the script
+source(file.path(Dir.Capfitogen, 
+                 "/scripts/Tools Herramientas/Complementa.R"))
+
+# visualise output
 
