@@ -146,23 +146,7 @@ geophysical_variables <- rast(geophysical_variables)
 
 # CAPFITOGEN pipeline =========================================================
 ## Download CAPFITOGEN scripts and files --------------------------------------
-files_to_download <- c(
-  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R",
-  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Parameters%20scripts%20(English)/Parameters_ELCmapas_2024_BioDT.R"
-)
-
-## download files in a for loop
-for (i in 1:length(files_to_download)) {
-  file_url = files_to_download[i]
-  temp <- tempfile()
-  download.file(file_url, temp)
-  file_name = sub(".*/", "", files_to_download[i])
-  message(paste("downloaded CAPFITOGEN script", file_name))
-  file.copy(temp, paste0(Dir.R_scripts,"/", file_name))
-  unlink(temp)
-}
-
-# alternative: download the whole repository,..
+# download and unzip CAPFITOGEN repository
 download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/heads/main.zip",
               destfile = "capfitogen-main.zip")
 unzip(zipfile = "capfitogen-main.zip")
@@ -199,12 +183,19 @@ predictors <- all_predictors[[(variables_to_keep)]]
 # save variables in CAPFITOGEN folder
 dir.create(file.path(Dir.Capfitogen,
            "rdatapoints/world/9x9"))
+dir.create(file.path(Dir.Capfitogen,
+                     "rdatamaps/world/9x9"),
+           recursive = TRUE)
 
 saveRDS(predictors,
         "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
+save(predictors,
+     file = "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
 
+predictor_names <- names(predictors)
+  
 for (i in 1:length(depth(predictors))) {
-  file_name_path = file.path("Capfitogen-main/rdatapoints/world/9x9",
+  file_name_path = file.path("Capfitogen-main/rdatamaps/world/9x9",
                              paste0(names(predictors[[i]]),".tif"))
   writeRaster(predictors[[i]],
               file_name_path)
@@ -219,7 +210,7 @@ pais <- "World"
 #geoqual <- FALSE # ?
 # totalqual<-60 #Only applies if geoqual=TRUE
 distdup <- 1 # distance threshold in km to remove duplicates from same population
-resol1 <- "10x10" # resolution, change to 9x9
+resol1 <- "9x9" # resolution, change to 9x9
 #buffy <- FALSE # buffer zone?
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
@@ -232,17 +223,14 @@ nminvar <- 3 # minimum number of variables to select per component. For example,
 resultados <- Dir.Results.ECLMap # directory to place results
 ruta <- Dir.Capfitogen
 
-
 ## Clustering and map creation: ELCmapas ---------------------------------------
 message("Clustering and creating maps")
 
 # Set additional parameters
-bioclimv <- BioClim_names #
+bioclimv <- predictor_names[grep("BIO", predictor_names)] #
 edaphv <- names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
-
 maxg <- 3 # maximum number of clusters per component 
-
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
 
@@ -250,23 +238,21 @@ iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calcul
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 
-# inputs to clustering: extracted values after variable selection
-
-bioclim_cl <- FUN.KmeansClust(ext_values = bioclim_ext, 
-                              max_clusters = 8, 
-                              vartype = 'bioclim')
-geophys_cl <- FUN.KmeansClust(ext_values = geophys_ext, 
-                              max_clusters = 8, 
-                              vartype = 'geophys')
-edaph_cl <- FUN.KmeansClust(ext_values = edaph_ext, 
-                            max_clusters = 8, 
-                            vartype = 'edaph')
-
-
+# below added by HJ, I'm not sure what it does
+# bioclim_cl <- FUN.KmeansClust(ext_values = bioclim_ext, 
+#                               max_clusters = 8, 
+#                               vartype = 'bioclim')
+# geophys_cl <- FUN.KmeansClust(ext_values = geophys_ext, 
+#                               max_clusters = 8, 
+#                               vartype = 'geophys')
+# edaph_cl <- FUN.KmeansClust(ext_values = edaph_ext, 
+#                             max_clusters = 8, 
+#                             vartype = 'edaph')
+#
 # HJ: function NOT READY yet, end of map creation doesn't work
-maps <- FUN.ELCmaps(edaph = edaph_clust, 
-                    bioclim = bioclim_clust, 
-                    geophys = geophys_cl)
-
+# maps <- FUN.ELCmaps(edaph = edaph_clust, 
+#                     bioclim = bioclim_clust, 
+#                     geophys = geophys_cl)
+# 
 
 
