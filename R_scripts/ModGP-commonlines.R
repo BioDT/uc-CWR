@@ -56,6 +56,7 @@ package_vec <- c(
   # Capfitogen ECLmapas packages
   # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
   'modeltools',
+  'maptools',
   'flexmix',
   'fpc',
   'vegan',

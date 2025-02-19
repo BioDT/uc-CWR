@@ -41,19 +41,27 @@ Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
-try(source(file.path(Dir.R_scripts, "SHARED-APICredentials.R")))
-if(as.character(options("gbif_user")) == "NULL" ){
-  options(gbif_user=rstudioapi::askForPassword("my gbif username"))}
-if(as.character(options("gbif_email")) == "NULL" ){
-  options(gbif_email=rstudioapi::askForPassword("my registred gbif e-mail"))}
-if(as.character(options("gbif_pwd")) == "NULL" ){
-  options(gbif_pwd=rstudioapi::askForPassword("my gbif password"))}
-
-if(!exists("API_Key") | !exists("API_User")){ # CS API check: if CDS API credentials have not been specified elsewhere
-  API_User <- readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
-  API_Key <- readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
-} # end of CDS API check
-
+{# set API credentials for access to climate data store (CDS)
+  try(source(file.path(Dir.R_scripts, "SHARED-APICredentials.R")))
+  if (as.character(options("gbif_user")) == "NULL") {
+    options(gbif_user = rstudioapi::askForPassword("my gbif username"))
+  }
+  if (as.character(options("gbif_email")) == "NULL") {
+    options(gbif_email = rstudioapi::askForPassword("my registred gbif e-mail"))
+  }
+  if (as.character(options("gbif_pwd")) == "NULL") {
+    options(gbif_pwd = rstudioapi::askForPassword("my gbif password"))
+  }
+  
+  if (!exists("API_Key") |
+      !exists("API_User")) {
+    # CS API check: if CDS API credentials have not been specified elsewhere
+    API_User <-
+      readline(prompt = "Please enter your Climate Data Store API user number and hit ENTER.")
+    API_Key <-
+      readline(prompt = "Please enter your Climate Data Store API key number and hit ENTER.")
+  } # end of CDS API check
+}
 ## NUMBER OF CORES
 if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
   numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
@@ -91,9 +99,7 @@ bioclim_data <- FUN.DownBV(
   Force = FALSE # do not overwrite already present data
   )
 
-#test <- terra::rast("Data/Environment/TEMP_2m_temperature_00001")
 bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
-#bioclim_variables <- terra::project(bioclim_variables, "EPSG:4326") # WGS84
 BioClim_names <- c( 
   ## BioClim variable names, see https://www.worldclim.org/data/bioclim.html
   "BIO1_Annual_Mean_Temperature",
@@ -136,11 +142,13 @@ geophysical_variables <- FUN.DownGV(
 )
   
 terra::res(geophysical_variables)
+geophysical_variables <- rast(geophysical_variables)
 
 # CAPFITOGEN pipeline =========================================================
 ## Download CAPFITOGEN scripts and files --------------------------------------
 files_to_download <- c(
-  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R"
+  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R",
+  "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Parameters%20scripts%20(English)/Parameters_ELCmapas_2024_BioDT.R"
 )
 
 ## download files in a for loop
@@ -148,11 +156,58 @@ for (i in 1:length(files_to_download)) {
   file_url = files_to_download[i]
   temp <- tempfile()
   download.file(file_url, temp)
-  file.copy(temp, 
-            paste0(Dir.R_scripts,"/", 
-                   substr(files_to_download[i], 
-                          95, nchar(files_to_download[i]))))
+  file_name = sub(".*/", "", files_to_download[i])
+  message(paste("downloaded CAPFITOGEN script", file_name))
+  file.copy(temp, paste0(Dir.R_scripts,"/", file_name))
   unlink(temp)
+}
+
+# alternative: download the whole repository,..
+download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/heads/main.zip",
+              destfile = "capfitogen-main.zip")
+unzip(zipfile = "capfitogen-main.zip")
+
+Dir.Capfitogen = file.path(Dir.Base, "Capfitogen-main/")
+
+# make folder for storing error log
+dir.create(paste0(Dir.Results.ECLMap, "/Error"))
+
+## Variable selection ---------------------------------------------------------
+# run variable selection based on variable inflation factor usdm::vif
+all_predictors <- c(bioclim_variables, 
+                    #edaphic_variables, 
+                    geophysical_variables)
+
+predictor_vifs <-
+  vifcor(
+    all_predictors,# replace with either BV, EV, GV to run separately per type
+    th = 0.8, # threshold of correlation
+    keep = NULL, # if wanted, list variables to keep no matter what
+    size = 1000, # subset size in case of big data (default 5000)
+    method = "pearson" # 'pearson','kendall','spearman'
+  )
+
+variables_to_keep <-
+  names(all_predictors)[names(all_predictors) %nin% predictor_vifs@excluded]
+
+message("variables kept after excluding most correlated:")
+print(variables_to_keep)
+
+# subset variables to exclude highly correlated ones
+predictors <- all_predictors[[(variables_to_keep)]]
+
+# save variables in CAPFITOGEN folder
+dir.create(file.path(Dir.Capfitogen,
+           "rdatapoints/world/9x9"))
+
+saveRDS(predictors,
+        "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
+
+for (i in 1:length(depth(predictors))) {
+  file_name_path = file.path("Capfitogen-main/rdatapoints/world/9x9",
+                             paste0(names(predictors[[i]]),".tif"))
+  writeRaster(predictors[[i]],
+              file_name_path)
 }
 
 ## Parameters -----------------------------------------------------------------
@@ -164,7 +219,7 @@ pais <- "World"
 #geoqual <- FALSE # ?
 # totalqual<-60 #Only applies if geoqual=TRUE
 distdup <- 1 # distance threshold in km to remove duplicates from same population
-resol1 <- "9x9km" # resolution, change to 9x9
+resol1 <- "10x10" # resolution, change to 9x9
 #buffy <- FALSE # buffer zone?
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
@@ -175,45 +230,25 @@ longitud <- FALSE
 nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
 #ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
 resultados <- Dir.Results.ECLMap # directory to place results
-ruta <- Dir.Results.ECLMap
+ruta <- Dir.Capfitogen
 
-## Variable selection ---------------------------------------------------------
-# run variable selection based on variable inflation factor usdm::vif
-
-all_predictors <- c(bioclim_variables, edaphic_variables, geophysical_variables)
-
-predictors <-
-  vifcor(
-    bioclim_variables,# replace with either BV, EV, GV to run separately per type
-    th = 0.9, # threshold of correlation
-    keep = NULL, # if wanted, list variables to keep no matter what
-    size = 1000, # subset size in case of big data (default 5000)
-    method = "pearson" # 'pearson','kendall','spearman'
-  )
 
 ## Clustering and map creation: ELCmapas ---------------------------------------
 message("Clustering and creating maps")
-
-# download ELC map creation script from https://github.com/HMauricioParra/Capfitogen
-elc_script_url = "https://raw.githubusercontent.com/HMauricioParra/Capfitogen/main/scripts/Tools%20Herramientas/ELCmapas.R"
-temp <- tempfile()
-download.file(elc_script_url, temp)
-file.copy(temp, paste0(Dir.R_scripts,"/ELCmapas.R"))
-unlink(temp)
-
 
 # Set additional parameters
 bioclimv <- BioClim_names #
 edaphv <- names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
 
-maxg <- 10 # maximum number of clusters per component 
+maxg <- 3 # maximum number of clusters per component 
 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
 
 # run the script
-source(file.path(Dir.R_scripts, "ELCmapas.R"))
+source(file.path(Dir.Capfitogen, 
+                 "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 
 # inputs to clustering: extracted values after variable selection
 

@@ -74,8 +74,10 @@ Logo/*
 # Job output files
 *.out
 
-# Downloaded data
+# Downloads
 R_scripts/ELCmapas.R
 CAPFITOGEN3/
+capfitogen-main.zip
+Capfitogen-main/
 scripts/
 hq
