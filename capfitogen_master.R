@@ -5,23 +5,24 @@
 #'  - Execution of shared data pipeline
 #'    - Species occurrence download from GBIF
 #'    - Environmental data load/download
-#'  - Execution of data formatting for CAPFITOGEN
-#'  - Execution of Capfitogen pipeline
+#'  - Data download of soil and geophisical variables
+#'  - Data formatting for CAPFITOGEN
+#'  - Execution of Capfitogen tools 'ELC maps' and 'Complementa'
+#'  - Visualisation of outputs
 #'  DEPENDENCIES:
 #'  - R_Scripts directory containing:
 #'  	- "MoDGP-commonlines.R"
 #'  	- "SHARED-APICredentials.R" -- NB! internal to project members, ask for access
 #'  	- "SHARED-Data.R"
-#'  	- "ELCmaps" - CAPFITOGEN tool
-#'  	- "Complementa" - CAPFITOGEN tool
-#' AUTHORS: [Erik Kusch, Heli Juottonen, Eva Lieungh]
+#' AUTHORS: [Eva Lieungh, Erik Kusch, Heli Juottonen]
 #' Capfitogen credit: Parra-Quijano et al. 2021, 
-#'                    https://repositorio.unal.edu.co/handle/unal/85787
+#'    https://repositorio.unal.edu.co/handle/unal/85787
 #' ####################################################################### #
-#https://github.com/ErikKusch/KrigR/blob/94cdb9e0aa3cff9f996575f4fb3d10c617eb37ab/metadata/reanalysis-era5-land.RData
+
 # PREAMBLE ================================================================
 set.seed(42) # making things reproducibly random
 rm(list=ls()) # clean environment
+gc()
 
 # Read species from command-line argument
 args = commandArgs(trailingOnly=TRUE)
@@ -33,11 +34,11 @@ if (length(args)==0) {
 }
 message(sprintf("SPECIES = %s", SPECIES))
 
-### Define directories in relation to project directory
+# Define directories in relation to project directory
 Dir.Base <- getwd()
 Dir.Scripts <- file.path(Dir.Base, "R_scripts")
 
-## source packages, directories, simple functions (...) 
+# source packages, directories, simple functions (...) 
 source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 
 ## API Credentials --------------------------------------------------------
@@ -64,10 +65,19 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 }
 
 ## NUMBER OF CORES
-if(!exists("numberOfCores")){ # Core check: if number of cores for parallel processing has not been set yet
-  numberOfCores <- as.numeric(readline(prompt = paste("How many cores do you want to allocate to these processes? Your machine has", parallel::detectCores())))
-} # end of Core check
-message(sprintf("numberOfCores = %d", numberOfCores))
+{
+  if (!exists("numberOfCores")) {
+    # Core check: if number of cores for parallel processing has not been set yet
+    numberOfCores <-
+      as.numeric(readline(
+        prompt = paste(
+          "How many cores do you want to allocate to these processes? Your machine has",
+          parallel::detectCores()
+        )
+      ))
+  } # end of Core check
+  message(sprintf("numberOfCores = %d", numberOfCores))
+}
 
 # DATA ====================================================================
 ## Run SHARED-Data script -------------------------------------------------
@@ -93,7 +103,7 @@ Species_ls <- FUN.DownGBIF(
 ##' Will this download Global Multi-resolution Terrain Elevation Data (GMTED2010) as well?
 ##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
 message("Downloading new or loading existing 19 BioClim bioclimatic variables")
-bioclim_data <- FUN.DownBV(
+bioclim_variables <- FUN.DownBV(
   T_Start = 1999, # what year to begin climatology calculation in
   T_End = 1999, # what year to end climatology calculation in
   Dir = Dir.Data.Envir, # where to store the data output on disk
@@ -130,21 +140,17 @@ message("Downloading new or loading existing edaphic/soil variables")
 
 edaphic_variables <- FUN.DownEV(
   Dir = Dir.Data.Envir,
+  target_resolution = c(250, 250),
   Force = TRUE,
   resample_to_match = bioclim_variables[[1]]
 )
 
-edaphic_variables <- rast("Data/Environment/bdod_0-5cm_mean.tif")
-  
 ### Geophysical data ------
 geophysical_variables <- FUN.DownGV(
   Dir = Dir.Data.Envir,
   Force = FALSE,
   resample_to_match = bioclim_variables[[1]]
 )
-  
-terra::res(geophysical_variables)
-geophysical_variables <- rast(geophysical_variables)
 
 # CAPFITOGEN pipeline =========================================================
 ## Download CAPFITOGEN scripts and files --------------------------------------
@@ -159,10 +165,17 @@ Dir.Capfitogen = file.path(Dir.Base, "Capfitogen-main/")
 # make folder for storing error log
 dir.create(paste0(Dir.Results.ECLMap, "/Error"))
 
+## Format GBIF data -----------------------------------------------------------
+# need a data frame named 'puntos' = points with occurrence points
+puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
+                     POINT_X = Species_ls[["occs"]][["DECLONGITUDE"]],
+                     POINT_Y = Species_ls[["occs"]][["DECLATITUDE"]])
+
+
 ## Variable selection ---------------------------------------------------------
 # run variable selection based on variable inflation factor usdm::vif
 all_predictors <- c(bioclim_variables, 
-                    #edaphic_variables, 
+                    edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
                     geophysical_variables)
 
 predictor_vifs <-
@@ -185,7 +198,7 @@ predictors <- all_predictors[[(variables_to_keep)]]
 
 # save variables in CAPFITOGEN folder
 dir.create(file.path(Dir.Capfitogen,
-           "rdatapoints/world/9x9"))
+                     "rdatapoints/world/9x9"))
 dir.create(file.path(Dir.Capfitogen,
                      "rdatamaps/world/9x9"),
            recursive = TRUE)
@@ -201,7 +214,8 @@ for (i in 1:length(depth(predictors))) {
   file_name_path = file.path("Capfitogen-main/rdatamaps/world/9x9",
                              paste0(names(predictors[[i]]),".tif"))
   writeRaster(predictors[[i]],
-              file_name_path)
+              file_name_path,
+              overwrite=TRUE)
 }
 
 ## Parameters -----------------------------------------------------------------

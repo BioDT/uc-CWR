@@ -287,7 +287,7 @@ FUN.DownGBIF <- function(
 	save_ls
 }
 
-# BIOCLIMATIC VARIABLE DOWNLOAD --------------------------------------------
+# BIOCLIMATIC DATA DOWNLOAD --------------------------------------------
 #' queries, downloads, and computes bioclimatic variables 
 #' at global extent from ERA5-Land. Water availability is based on 
 #' soil moisture level 1 (0-7cm) and 2 (7-28cm)
@@ -296,151 +296,158 @@ FUN.DownBV <- function(
 		T_End = 2000, # what year to end climatology calculation in
 		Dir = getwd(), # where to store the data output on disk
 		Force = FALSE # do not overwrite already present data
-		){
-  
+) {
   # Workaround for Dir, 1/2
   # original_wd = getwd()
   # setwd(Dir)
   # End of workaround
   
-	FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
-	
-	if(!Force & file.exists(FNAME)){
-		BV_ras <- stack(FNAME)
-		names(BV_ras) <- paste0("BIO", 1:19)
-		message("Data has already been downloaded with these specifications. 
-		        It has been loaded from the disk. If you wish to override 
-		        the present data, please specify Force = TRUE")
-		return(BV_ras)
-	}
-	
-	### Raw soil moisture level data ----
-	#' We download raw soil moisture data for 
-	#' layers 1 (0-7cm) and 2 (7-28cm) separately. 
-	#' These are then summed up and used in the 
-	#' bioclimatic variable computation of KrigR
-	FNAME_RAW <- file.path(Dir, paste(tools::file_path_sans_ext(basename(FNAME)), 
-						   "volumetric_soil_water_layer_1", "RAW.nc", sep = "_"))
-	if(!file.exists(FNAME_RAW)) {
-		#### Downloading ----
-		Qsoil1_ras <- CDownloadS(
-			Variable = "volumetric_soil_water_layer_1", # could also be total_precipitation
-			DataSet = "reanalysis-era5-land-monthly-means",
-			Type = "monthly_averaged_reanalysis",
-			DateStart = paste0(T_Start, "-01-01 00:00"),
-			DateStop = paste0(T_End, "-12-31 23:00"),
-			TResolution = "month",
-			Dir = Dir,
-			Extent = ne_countries(type = "countries", scale = "medium")[,1],
-			FileName = "Qsoil1",
-			API_User = API_User,
-			API_Key = API_Key
-		)
-		
-		Qsoil2_ras <- CDownloadS(
-			Variable = "volumetric_soil_water_layer_2", # could also be total_precipitation
-			DataSet = "reanalysis-era5-land-monthly-means",
-			Type = "monthly_averaged_reanalysis",
-			DateStart = paste0(T_Start, "-01-01 00:00"),
-			DateStop = paste0(T_End, "-12-31 23:00"),
-			TResolution = "month",
-			Dir = Dir,
-			Extent = ne_countries(type = "countries", scale = "medium")[,1],
-			FileName = "Qsoil2",
-			API_User = API_User,
-			API_Key = API_Key
-		)	
-		
-		#### Combining ----
-		QSoilCombin_ras <- Qsoil1_ras + Qsoil2_ras
-		
-		#### Saving ----
-		terra::metags(QSoilCombin_ras) <- terra::metags(Qsoil1_ras)
-		QSoilCombin_ras <- KrigR:::Meta.NC(
-			NC = QSoilCombin_ras, 
-			FName = FNAME_RAW,
-			Attrs = terra::metags(QSoilCombin_ras), Write = TRUE,
-			Compression = 9
-		)
-		
-		### Deleting unnecessary files ----
-		unlink(list.files(Dir, pattern = "Qsoil", full.names = TRUE))
-	}
-	
-	### Bioclimatic data ----
-	BV_ras <- BioClim(
-		Temperature_Var = "2m_temperature",
-		Temperature_DataSet = "reanalysis-era5-land",
-		Temperature_Type = NA,
-		Water_Var = "volumetric_soil_water_layer_1", # could also be total_precipitation
-		Water_DataSet = "reanalysis-era5-land-monthly-means",
-		Water_Type = "monthly_averaged_reanalysis",
-		Y_start = T_Start, Y_end = T_End,
-		Extent = ne_countries(type = "countries", scale = "medium")[,1],
-		Dir = Dir, 
-		FileName = basename(FNAME),
-		FileExtension = ".nc", 
-		Compression = 9,
-		API_User = API_User,
-		API_Key = API_Key
-	)
-	
-	# Not sure if this should be in the code or not. 
-	# ### Masking ---- 
-	# Land_sp <- ne_countries(type = "countries", scale = "medium")
-	# BV_ras <- crop(BV_ras, extent(Land_sp))
-	# BV_mask <- KrigR:::mask_Shape(base.map = BV_ras[[1]], Shape = Land_sp[,"name"])
-	# BV_ras <- mask(BV_ras, BV_mask)
-	# 
-	# ### Saving ----
-	# writeRaster(BV_ras, filename = FNAME, format = "CDF", overwrite = TRUE)
-	# unlink(file.path(Dir, "Qsoil_BC.nc"))
-	# names(BV_ras) <- paste0("BIO", 1:19)
-	
-	### JSON RO-CRATE creation ----
-	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
-	
-	JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
-	JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <- 
-	  "https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land"
-	JSON_ls$`@graph`[[2]]$datePublished <- Sys.time() # tail(file.info(FNAME)$ctime)
-	JSON_ls$`@graph`[[2]]$name <- 
-	  "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
-	JSON_ls$`@graph`[[2]]$keywords <- list("ERA5-Land", 
-	                                       "ECMWF", 
-	                                       "Bioclimatic Variables", 
-	                                       "Soil Moisture")
-	JSON_ls$`@graph`[[2]]$description <- 
-	  "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
-	
-	JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
-	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
-	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
-	
-	JSON_ls$`@graph`[[5]]$instrument$`@id` <- 
-	  "https://doi.org/10.1088/1748-9326/ac48b3"
-	
-	con <- file(file.path(Dir, 
-	                      paste0(tools::file_path_sans_ext(basename(FNAME)), 
-	                             ".json")))
-	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), 
-	           con)
-	close(con)
-	
-	message(paste0("ERA5 citation:\nCopernicus Climate Change Service, Climate Data Store, (2024): ERA5-land post-processed daily-statistics from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.e9c9c792 ",
-	               "(Accessed on ", Sys.Date(),")"))
-	
-	# Workaround for Dir, 2/2
-#	setwd(original_wd)
-	# End of workaround
-	
-	BV_ras
+  FNAME <- file.path(Dir, paste0("BV_", T_Start, "-", T_End, ".nc"))
+  
+  if (!Force & file.exists(FNAME)) {
+    BV_ras <- stack(FNAME)
+    names(BV_ras) <- paste0("BIO", 1:19)
+    message(
+      "Data has already been downloaded with these specifications.
+		        It has been loaded from the disk. If you wish to override
+		        the present data, please specify Force = TRUE"
+    )
+    return(BV_ras)
+  }
+  
+  ### Raw soil moisture level data ----
+  #' We download raw soil moisture data for
+  #' layers 1 (0-7cm) and 2 (7-28cm) separately.
+  #' These are then summed up and used in the
+  #' bioclimatic variable computation of KrigR
+  FNAME_RAW <-
+    file.path(
+      Dir,
+      paste(
+        tools::file_path_sans_ext(basename(FNAME)),
+        "volumetric_soil_water_layer_1",
+        "RAW.nc",
+        sep = "_"
+      )
+    )
+  if (!file.exists(FNAME_RAW)) {
+    #### Downloading ----
+    Qsoil1_ras <- CDownloadS(
+      Variable = "volumetric_soil_water_layer_1", # could also be total_precipitation
+      DataSet = "reanalysis-era5-land-monthly-means",
+      Type = "monthly_averaged_reanalysis",
+      DateStart = paste0(T_Start, "-01-01 00:00"),
+      DateStop = paste0(T_End, "-12-31 23:00"),
+      TResolution = "month",
+      Dir = Dir,
+      Extent = ne_countries(type = "countries", scale = "medium")[, 1],
+      FileName = "Qsoil1",
+      API_User = API_User,
+      API_Key = API_Key
+    )
+    
+    Qsoil2_ras <- CDownloadS(
+      Variable = "volumetric_soil_water_layer_2",
+      # could also be total_precipitation
+      DataSet = "reanalysis-era5-land-monthly-means",
+      Type = "monthly_averaged_reanalysis",
+      DateStart = paste0(T_Start, "-01-01 00:00"),
+      DateStop = paste0(T_End, "-12-31 23:00"),
+      TResolution = "month",
+      Dir = Dir,
+      Extent = ne_countries(type = "countries", scale = "medium")[, 1],
+      FileName = "Qsoil2",
+      API_User = API_User,
+      API_Key = API_Key
+    )
+    
+    #### Combining ----
+    QSoilCombin_ras <- Qsoil1_ras + Qsoil2_ras
+    
+    #### Saving ----
+    terra::metags(QSoilCombin_ras) <- terra::metags(Qsoil1_ras)
+    QSoilCombin_ras <- KrigR:::Meta.NC(
+      NC = QSoilCombin_ras,
+      FName = FNAME_RAW,
+      Attrs = terra::metags(QSoilCombin_ras),
+      Write = TRUE,
+      Compression = 9
+    )
+    
+    ### Deleting unnecessary files ----
+    unlink(list.files(Dir, pattern = "Qsoil", full.names = TRUE))
+  }
+  
+  ### Bioclimatic data ----
+  BV_ras <- BioClim(
+    Temperature_Var = "2m_temperature",
+    Temperature_DataSet = "reanalysis-era5-land",
+    Temperature_Type = NA,
+    Water_Var = "volumetric_soil_water_layer_1", # could also be total_precipitation
+    Water_DataSet = "reanalysis-era5-land-monthly-means",
+    Water_Type = "monthly_averaged_reanalysis",
+    Y_start = T_Start,
+    Y_end = T_End,
+    Extent = ne_countries(type = "countries", scale = "medium")[, 1],
+    Dir = Dir,
+    FileName = basename(FNAME),
+    FileExtension = ".nc",
+    Compression = 9,
+    API_User = API_User,
+    API_Key = API_Key
+  )
+  
+  ### JSON RO-CRATE creation ----
+  JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
+  
+  JSON_ls$`@graph`[[2]]$hasPart[[1]]$`@id` <- basename(FNAME)
+  JSON_ls$`@graph`[[2]]$about[[1]]$`@id` <-
+    "https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-land"
+  JSON_ls$`@graph`[[2]]$datePublished <-
+    Sys.time() # tail(file.info(FNAME)$ctime)
+  JSON_ls$`@graph`[[2]]$name <-
+    "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+  JSON_ls$`@graph`[[2]]$keywords <- list("ERA5-Land",
+                                         "ECMWF",
+                                         "Bioclimatic Variables",
+                                         "Soil Moisture")
+  JSON_ls$`@graph`[[2]]$description <-
+    "Bioclimatic data obtained from ERA5-Land. Water avialbility is denoted via the sum of soil moisture layer 1 and 2."
+  
+  JSON_ls$`@graph`[[3]]$name <- basename(FNAME)
+  JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
+  JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
+  
+  JSON_ls$`@graph`[[5]]$instrument$`@id` <-
+    "https://doi.org/10.1088/1748-9326/ac48b3"
+  
+  con <- file(file.path(Dir,
+                        paste0(
+                          tools::file_path_sans_ext(basename(FNAME)),
+                          ".json"
+                        )))
+  writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE),
+             con)
+  close(con)
+  
+  message(
+    paste0(
+      "ERA5 citation:\nCopernicus Climate Change Service, Climate Data Store, (2024): ERA5-land post-processed daily-statistics from 1950 to present. Copernicus Climate Change Service (C3S) Climate Data Store (CDS), DOI: 10.24381/cds.e9c9c792 ",
+      "(Accessed on ", Sys.Date(),")")
+  )
+  
+  # Workaround for Dir, 2/2
+  #	setwd(original_wd)
+  # End of workaround
+  
+  BV_ras
 }
 
-## EDAPHIC DATA DOWNLOAD ------------------------------------------------------
+# EDAPHIC DATA DOWNLOAD -------------------------------------------------------
 # INCOMPLETE! Works for some variables, but the data set is incomplete.
 FUN.DownEV <-
   function(Dir = getwd(), # where to store the data output on disk
+           target_resolution = c(250, 250),
            Force = FALSE, # do not overwrite already present data,
            resample_to_match = FALSE) {
     # define a file name
@@ -450,13 +457,14 @@ FUN.DownEV <-
     if (!Force & file.exists(FNAME)) {
       EV_ras <- stack(FNAME)
       message(
-        "Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
+        "Data has already been downloaded. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
       )
       return(EV_ras)
     }
+    
     # if the file doesn't already exist:
     if (!file.exists(FNAME)) {
-      ## downloading data from SoilGrids
+      ## download data from SoilGrids ----
       message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
       soilGrids_url = "/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
       
@@ -468,11 +476,11 @@ FUN.DownEV <-
       #' MostProbable.vrt has the most probable soil type per gridcell.
       #' Soil salinity: https://data.isric.org/geonetwork/srv/eng/catalog.search#/metadata/c59d0162-a258-4210-af80-777d7929c512
       
-      SoilGrids_variables_in <- c(
-        "bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
-        "cec/cec_0-5cm_mean", # Cation Exchange Capacity of the soil, 	mmol(c)/kg
-        "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
-        "silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
+      SoilGrids_variables_in <-
+        c("bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
+          "cec/cec_0-5cm_mean")#, # Cation Exchange Capacity of the soil, 	mmol(c)/kg
+      #"cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
+      #"silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
       #"clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
       #"sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
       #"nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
@@ -483,7 +491,7 @@ FUN.DownEV <-
       
       SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
       
-      soilGrids_data <- list()
+      soilGrids_data <- NULL
       
       for (i in 1:length(SoilGrids_variables_in)) {
         variable_name = SoilGrids_variables[i]
@@ -501,7 +509,7 @@ FUN.DownEV <-
             src_dataset = paste0(soilGrids_url,
                                  SoilGrids_variables_in[i], ".vrt"),
             dst_dataset = path_to_downloaded_file,
-            tr = c(250, 250) # target resolution
+            tr = target_resolution # target resolution
           ),
           # or else load it from file
           downloaded_variable <- path_to_downloaded_file
@@ -509,7 +517,9 @@ FUN.DownEV <-
         
         ## load variable as raster
         downloaded_raster <- rast(downloaded_variable)
-
+        plot(downloaded_raster, main = SoilGrids_variables[i])
+        
+        ### resample ----
         ## if provided, resample to match another raster object's origin and resolution
         if (!missing(resample_to_match)) {
           message(paste0("resampling raster to match ", names(resample_to_match)))
@@ -518,51 +528,68 @@ FUN.DownEV <-
           ## project downloaded rasters to match resample_to_match file
           projection_to_match <- terra::crs(resample_to_match)
           terra::crs(downloaded_raster) <- projection_to_match
-
+          
           ## resample
           downloaded_raster <-
             terra::resample(downloaded_raster,
-                            resample_to_match) 
+                            resample_to_match)
+          }
+        
+        soilGrids_data <- c(soilGrids_data, downloaded_raster)
 
         }
-        
-        soilGrids_data[i] <- downloaded_raster
-        
-      }
-
+      
+      ## HSWD downloads ----
       ## download additional rasters from HSWD
       message("Downloading data from HSWD (harmonised world soil database) via fao.org")
       
-      PH_nutrient <-
-        rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc")
+      path_to_PH_nutrient = file.path(Dir, "HSWD_PH_nutrient.tif")
+      if (!missing(path_to_PH_nutrient)) {
+        message("downloading HSWD PH nutrient")
+        download.file(url = "https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc",
+                      destfile = path_to_PH_nutrient)
+        }
       
-      PH_toxicity <-           
-        rast("https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc")
+      PH_nutrient <- rast(path_to_PH_nutrient)
       
-      ## if provided, resample to match another raster object's origin and resolution
-      if (!missing(resample_to_match)) {
-        message(paste0("resampling raster to match ", names(resample_to_match)))
-        resample_to_match <- rast(resample_to_match)
-        
-        ## project downloaded rasters to match resample_to_match file
-        projection_to_match <- terra::crs(resample_to_match)
-        terra::crs(PH_nutrient) <- projection_to_match
-        terra::crs(PH_toxicity) <- projection_to_match
-        
-        ## resample
-        PH_nutrient <-
-          terra::resample(PH_nutrient,
-                          resample_to_match) 
-        
-        PH_toxicity <-
-          terra::resample(PH_toxicity,
-                          resample_to_match) 
+      path_to_PH_toxicity = file.path(Dir, "HSWD_PH_toxicity.tif")
+      if (!missing(path_to_PH_toxicity)) {
+        message("downloading HSWD PH toxicity")
+        download.file(url = "https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc",
+                      destfile = path_to_PH_toxicity)
+        }
       
-      ## combine and rename rasters
-      EV_rasters <- rast(c(soilGrids_data, PH_nutrient, PH_toxicity))
-      names(EV_rasters) <- c(SoilGrids_variables, "Nutrient", "Toxicity")
+      PH_toxicity <- rast(path_to_PH_toxicity)
       
     }
+    
+    ### resample ----
+    ## if provided, resample to match another raster object's origin and resolution
+    if (!missing(resample_to_match)) {
+      message(paste0("resampling raster to match ", names(resample_to_match)))
+      resample_to_match <- rast(resample_to_match)
+      
+      ## project downloaded rasters to match resample_to_match file
+      projection_to_match <- terra::crs(resample_to_match)
+      terra::crs(PH_nutrient) <- projection_to_match
+      terra::crs(PH_toxicity) <- projection_to_match
+      
+      ## resample
+      PH_nutrient <-
+        terra::resample(PH_nutrient,
+                        resample_to_match)
+      
+      PH_toxicity <-
+        terra::resample(PH_toxicity,
+                        resample_to_match)
+      
+    }
+    ### combine and rename rasters ----
+    EV_rasters <- rast(c(soilGrids_data,
+                         PH_nutrient, PH_toxicity))
+    
+    names(EV_rasters) <- c(SoilGrids_variables,
+                           "Nutrient", "Toxicity")
     
     ### Saving ----
     message(paste0("saving as netCDF:", FNAME))
@@ -573,9 +600,8 @@ FUN.DownEV <-
     EV_rasters
     
   }
-}
 
-## GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
+# GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
 FUN.DownGV <-
   function(Dir = getwd(),# where to store the data output on disk
            Force = FALSE,# do not overwrite already present data,
@@ -589,8 +615,10 @@ FUN.DownGV <-
       message(
         "Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
       )
+      
       return(GV_ras)
-    }
+    
+      }
     
     # if the file doesn't already exist:
     if (!file.exists(FNAME)) {
@@ -602,6 +630,7 @@ FUN.DownGV <-
       ## Download digital elevation model (DEM) ------
       ##' Fick, S.E. and R.J. Hijmans, 2017. WorldClim 2
       ##' https://doi.org/10.1002/joc.5086
+      message("digital elevation model")
       worldclim_dem_url = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_2.5m_elev.zip"
       temp <- tempfile()
       download.file(worldclim_dem_url, temp)
@@ -609,7 +638,7 @@ FUN.DownGV <-
             exdir = Dir)
       unlink(temp)
       dem <- rast(paste0(Dir, "/wc2.1_2.5m_elev.tif"))
-      
+      names(dem) <- "elevation"
       
       ## resample ------
       ## if provided, resample to match another raster object's origin and resolution
@@ -625,25 +654,24 @@ FUN.DownGV <-
         dem <- terra::resample(dem,
                                resample_to_match)
         
-        
-      }
+        }
       
       geophysical_data[1] <- dem
-      
-    }
     
+      }
     
     ## combine and rename rasters
     geophysical_rasters <- rast(geophysical_data)
     
     ### Saving ----
+    message("saving as NetCDF")
     terra::writeCDF(geophysical_rasters,
                     filename = FNAME,
                     overwrite = TRUE)
     
     geophysical_rasters
-    
-  }
+   
+    }
 
 
 
@@ -656,7 +684,7 @@ FUN.DownGV <-
 ##' (CIAT), available from http://srtm.csi.cgiar.org.
 #dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
 
-### DRAFT: Google Earth Engine downloads. -------------------------------------
+# DRAFT: Google Earth Engine downloads. -------------------------------------
 #' Almost working, but missing user/project credentials and login. 
 #' See https://developers.google.com/earth-engine/guides/auth
 #' ee.Authenticate()
