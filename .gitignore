@@ -73,6 +73,8 @@ Logo/*
 
 # Job output files
 *.out
+results/ELCmap/
+results/
 
 # Downloads
 R_scripts/ELCmapas.R

@@ -544,21 +544,18 @@ FUN.DownEV <-
       message("Downloading data from HSWD (harmonised world soil database) via fao.org")
       
       path_to_PH_nutrient = file.path(Dir, "HSWD_PH_nutrient.tif")
-      if (!missing(path_to_PH_nutrient)) {
-        message("downloading HSWD PH nutrient")
+      if (!file.exists(path_to_PH_nutrient)) {
         download.file(url = "https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq1.asc",
                       destfile = path_to_PH_nutrient)
-        }
-      
+      }
       PH_nutrient <- rast(path_to_PH_nutrient)
       
       path_to_PH_toxicity = file.path(Dir, "HSWD_PH_toxicity.tif")
-      if (!missing(path_to_PH_toxicity)) {
+      if (missing(path_to_PH_toxicity)) {
         message("downloading HSWD PH toxicity")
         download.file(url = "https://www.fao.org/fileadmin/user_upload/soils/docs/HWSD/Soil_Quality_data/sq6.asc",
                       destfile = path_to_PH_toxicity)
-        }
-      
+      }
       PH_toxicity <- rast(path_to_PH_toxicity)
       
     }
@@ -584,6 +581,7 @@ FUN.DownEV <-
                         resample_to_match)
       
     }
+    
     ### combine and rename rasters ----
     EV_rasters <- rast(c(soilGrids_data,
                          PH_nutrient, PH_toxicity))

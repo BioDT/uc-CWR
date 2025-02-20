@@ -175,7 +175,7 @@ puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
 ## Variable selection ---------------------------------------------------------
 # run variable selection based on variable inflation factor usdm::vif
 all_predictors <- c(bioclim_variables, 
-                    edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
+                    #edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
                     geophysical_variables)
 
 predictor_vifs <-
@@ -190,11 +190,12 @@ predictor_vifs <-
 variables_to_keep <-
   names(all_predictors)[names(all_predictors) %nin% predictor_vifs@excluded]
 
-message("variables kept after excluding most correlated:")
+message("variables kept after excluding the most correlated ones:")
 print(variables_to_keep)
 
 # subset variables to exclude highly correlated ones
 predictors <- all_predictors[[(variables_to_keep)]]
+predictors <- raster::stack(predictors)
 
 # save variables in CAPFITOGEN folder
 dir.create(file.path(Dir.Capfitogen,
@@ -210,7 +211,7 @@ save(predictors,
 
 predictor_names <- names(predictors)
   
-for (i in 1:length(depth(predictors))) {
+for (i in 1:dim(predictors)[3]) {
   file_name_path = file.path("Capfitogen-main/rdatamaps/world/9x9",
                              paste0(names(predictors[[i]]),".tif"))
   writeRaster(predictors[[i]],
@@ -245,13 +246,14 @@ message("Clustering and creating maps")
 
 # Set additional parameters
 bioclimv <- predictor_names[grep("BIO", predictor_names)] #
-edaphv <- names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
+edaphv <- names(geophysical_variables)#names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
 maxg <- 3 # maximum number of clusters per component 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
 
 # run the script
+## NB! Change made in capfitogen script: replaced extract with raster::extract (other package masked it and caused error)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 
