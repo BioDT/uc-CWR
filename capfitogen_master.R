@@ -2,19 +2,20 @@
 #' PROJECT: [BioDT CWR - Capfitogen] 
 #' CONTENTS: 
 #'  - Loading/installing packages
-#'  - Execution of shared data pipeline
+#'  - Execution of data pipeline
 #'    - Species occurrence download from GBIF
 #'    - Environmental data load/download
-#'  - Data download of soil and geophisical variables
-#'  - Data formatting for CAPFITOGEN
-#'  - Execution of Capfitogen tools 'ELC maps' and 'Complementa'
+#'  - Data formatting and parameter definition for CAPFITOGEN
+#'  - Execution of CAPFITOGEN tools 
+#'    - 'ELC maps'
+#'    - 'Complementa'
 #'  - Visualisation of outputs
 #'  DEPENDENCIES:
 #'  - R_Scripts directory containing:
 #'  	- "MoDGP-commonlines.R"
 #'  	- "SHARED-APICredentials.R" -- NB! internal to project members, ask for access
 #'  	- "SHARED-Data.R"
-#' AUTHORS: [Eva Lieungh, Erik Kusch, Heli Juottonen]
+#' AUTHORS: [Eva Lieungh, Erik Kusch, Heli Juottonen, Desalegn Chala]
 #' Capfitogen credit: Parra-Quijano et al. 2021, 
 #'    https://repositorio.unal.edu.co/handle/unal/85787
 #' ####################################################################### #
@@ -161,14 +162,31 @@ if (!file.exists("capfitogen-main.zip")) {
   unzip(zipfile = "capfitogen-main.zip")
 }
 
+if (!file.exists(file.path(Dir.Results.Complementa.Error,"process_info.txt"))) {
+  file.create(file.path(Dir.Results.Complementa.Error,"process_info.txt"))
+}
+
 ## Format GBIF data -----------------------------------------------------------
 # need a data frame named 'puntos' = points with occurrence points
 puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
                      POINT_X = Species_ls[["occs"]][["DECLONGITUDE"]],
                      POINT_Y = Species_ls[["occs"]][["DECLATITUDE"]])
 
-# create 'pasaporte' file
+### create 'pasaporte' ----
+#' pasaporte file uses Darwincore names? 
+#' So it should be OK to use the occurrences from the GBIF download directly.
+#' Place it in the right folder so Capfitogen can find it:
+pasaporte_file_name = paste0(sub(pattern = " ",
+                                 replacement = "_",
+                                 SPECIES),
+                             ".txt")
 
+write.table(Species_ls[["occs"]],
+            file.path("Capfitogen-main/Pasaporte",
+                      pasaporte_file_name))
+
+pasaportest <- read.table("Capfitogen-main/Pasaporte/Lathyrus_angulatus.txt",
+                          header = TRUE)
 
 ## Variable selection ---------------------------------------------------------
 # run variable selection based on variable inflation factor usdm::vif
@@ -221,8 +239,11 @@ for (i in 1:dim(predictors)[3]) {
 ## used in CAPFITOGEN scripts below
 ruta <- Dir.Capfitogen # path to capfitogen scripts
 pais <- "World" # global extent - big modifications will be necessary to use different extent
+pasaporte <- pasaporte_file_name # species occurrence data
+
 geoqual <- FALSE
-duplicat <- TRUE# duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
+totalqual<-30 # Only applies if GEOQUAL=TRUE, must be a value between 0 and 100
+duplicat <- TRUE # duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
 distdup <- 1 # distance threshold in km to remove duplicates from same population
 resol1 <- "9x9" # resolution, change to 9x9
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
@@ -238,14 +259,16 @@ iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calcul
 
 # parameters for Complementa tool
 gaptype <- FALSE # Note: Representa tool a prerequisite of gaptype=TRUE 
+gaptresh <- 4 #Only applies if gaptype=TRUE
+gapna <- "exclude" #Only applies if gaptype=TRUE
 celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by cells (grid)
 resol1 <- "9x9"#"celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
 nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
 areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
 WDPA <- TRUE #Only applies if areas=TRUE
-#propio<-TRUE # =own, alternative user defined file instead of WDPA
-#nombre<-"EcuadorAreasProt" #Only applies if propio=TRUE, name of alternative shapefile
-#campo<-"objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
+propio <- FALSE # =own, alternative user defined file instead of WDPA
+nombre <- "EcuadorAreasProt" #Only applies if propio=TRUE, name of alternative shapefile
+campo <- "objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
 nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
 coveran <- TRUE # if coveran=TRUE a coverage analysis will be generated for the network of protected areas and a folder called CoverageAnalysis should appear in the results within the resultados para areas folder 
 niveltax <- "species"# At which taxonomic level the complementarity analysis is going to run (3 options: "genus", "species" or "subtaxa"). Take into account the following: If "genus" is selected, , in the GENUS column of the passport table there must be at least two different genera, or the same for "species" (SPECIES column) or "subtaxa" (SUBTAXA column)... if there are only NA values or there is only one value in the target column, it can generate errors.
@@ -256,8 +279,10 @@ datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the
 data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
 
 ## Clustering and map creation: ELCmapas ---------------------------------------
-message("Clustering and creating maps")
 resultados <- Dir.Results.ECLMap # directory to place results
+
+message("Clustering and creating maps")
+
 # run the script
 ##' NB! Change made in capfitogen script: 
 ##' replaced 'extract' with 'raster::extract' 
@@ -278,13 +303,16 @@ for (i in elc_tif_outputs) {
 }
 
 ## Overlaying conservation maps "Complementa" ---------------------------------
+resultados <- Dir.Results.Complementa
+
 message("running Capfitogen Complementa tool for conservation areas")
-resultados <- resultados <- Dir.Results.Complementa
 
-# run the script
+
 #' NB! Manually copied the script into the folder, as it is missing on GH...
-source(file.path(Dir.Capfitogen, 
+{ # run the script
+  source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
-
+  setwd(Dir.Base)
+}
 # visualise output
 
