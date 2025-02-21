@@ -609,34 +609,60 @@ FUN.DownGV <-
     
     # check if file already exists and whether to overwrite
     if (!Force & file.exists(FNAME)) {
-      GV_ras <- stack(FNAME)
+      GV_raster <- rast(FNAME)
+      names(GV_raster) <- c("elevation",
+                            "mean_wind_speed_of_windiest_month")
       message(
         "Data has already been downloaded with these specifications. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
       )
       
-      return(GV_ras)
-    
-      }
+      return(GV_raster)
+      
+    }
     
     # if the file doesn't already exist:
-    if (!file.exists(FNAME)) {
-      
-      message("downloading geophysical data")
-      
-      geophysical_data <- list()
+    if (Force | !file.exists(FNAME)) {
+      message("downloading or loading geophysical data")
       
       ## Download digital elevation model (DEM) ------
       ##' Fick, S.E. and R.J. Hijmans, 2017. WorldClim 2
       ##' https://doi.org/10.1002/joc.5086
-      message("digital elevation model")
-      worldclim_dem_url = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_2.5m_elev.zip"
-      temp <- tempfile()
-      download.file(worldclim_dem_url, temp)
-      unzip(zipfile = temp,
-            exdir = Dir)
-      unlink(temp)
+      message("- digital elevation model")
+      if (!file.exists(paste0(Dir, "/wc2.1_2.5m_elev.tif"))) {
+        worldclim_dem_url = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_2.5m_elev.zip"
+        temp <- tempfile()
+        download.file(worldclim_dem_url, temp)
+        unzip(zipfile = temp,
+              exdir = Dir)
+        unlink(temp)
+      }
       dem <- rast(paste0(Dir, "/wc2.1_2.5m_elev.tif"))
       names(dem) <- "elevation"
+      
+      ## Download wind speed ------
+      ##' WorldClim 2
+      message("- mean wind speed of windiest month (annual max of monthly means)")
+      if (!file.exists(paste0(Dir, "/wc2.1_2.5m_wind_max.tif"))) {
+        worldclim_wind_url = "https://geodata.ucdavis.edu/climate/worldclim/2_1/base/wc2.1_2.5m_wind.zip"
+        temp <- tempfile()
+        download.file(worldclim_wind_url, temp)
+        unzip(zipfile = temp,
+              exdir = Dir)
+        unlink(temp)
+        
+        ## read monthly wind speed and find annual max of monthly means
+        month_numbers = c(paste0("0", 2:9), as.character(10:12))
+        wind_stack <- rast(paste0(Dir, "/wc2.1_2.5m_wind_01.tif"))
+        for (i in month_numbers) {
+          raster_i = rast(paste0(Dir, "/wc2.1_2.5m_wind_", i, ".tif"))
+          wind_stack <- c(wind_stack, raster_i)
+        }
+        max_wind <- terra::app(wind_stack, max)
+        writeRaster(max_wind,
+                    filename = paste0(Dir, "/wc2.1_2.5m_wind_max.tif"))
+      }
+      wind <- rast(paste0(Dir, "/wc2.1_2.5m_wind_max.tif"))
+      names(wind) <- "mean_wind_speed_of_windiest_month"
       
       ## resample ------
       ## if provided, resample to match another raster object's origin and resolution
@@ -647,29 +673,32 @@ FUN.DownGV <-
         ## project downloaded rasters to match resample_to_match file
         projection_to_match <- terra::crs(resample_to_match)
         terra::crs(dem) <- projection_to_match
+        terra::crs(wind) <- projection_to_match
+        message("projected to match input")
         
         ## resample
         dem <- terra::resample(dem,
                                resample_to_match)
+        message("dem successfully resampled")
         
-        }
-      
-      geophysical_data[1] <- dem
-    
+        wind <- terra::resample(wind,
+                                resample_to_match)
+        message("wind successfully resampled")
+        
       }
-    
-    ## combine and rename rasters
-    geophysical_rasters <- rast(geophysical_data)
-    
-    ### Saving ----
-    message("saving as NetCDF")
-    terra::writeCDF(geophysical_rasters,
-                    filename = FNAME,
-                    overwrite = TRUE)
-    
-    geophysical_rasters
-   
+      
+      ### combine rasters
+      geophysical_rasters <- c(dem, wind)
+      
+      ### Saving ----
+      message("saving as NetCDF")
+      terra::writeCDF(geophysical_rasters,
+                      filename = FNAME,
+                      overwrite = TRUE)
+      
+      geophysical_rasters
     }
+  }
 
 
 

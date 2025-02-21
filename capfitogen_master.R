@@ -153,17 +153,21 @@ geophysical_variables <- FUN.DownGV(
 )
 
 # CAPFITOGEN pipeline =========================================================
-## Download CAPFITOGEN scripts and files --------------------------------------
+## Download CAPFITOGEN scripts ------------------------------------------------
 # download and unzip CAPFITOGEN repository
-download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/heads/main.zip",
+if (!file.exists("capfitogen-main.zip")) {
+  download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/heads/main.zip",
               destfile = "capfitogen-main.zip")
-unzip(zipfile = "capfitogen-main.zip")
+  unzip(zipfile = "capfitogen-main.zip")
+}
 
 # define path to CAPFITOGEN folder
 Dir.Capfitogen = file.path(Dir.Base, "Capfitogen-main/")
 
 # make folder for storing error log
-dir.create(paste0(Dir.Results.ECLMap, "/Error"))
+if (!dir.exists(paste0(Dir.Results.ECLMap, "/Error"))) {
+  dir.create(paste0(Dir.Results.ECLMap, "/Error"))
+}
 
 ## Format GBIF data -----------------------------------------------------------
 # need a data frame named 'puntos' = points with occurrence points
@@ -198,11 +202,11 @@ predictors <- all_predictors[[(variables_to_keep)]]
 predictors <- raster::stack(predictors)
 
 # save variables in CAPFITOGEN folder
-dir.create(file.path(Dir.Capfitogen,
-                     "rdatapoints/world/9x9"))
-dir.create(file.path(Dir.Capfitogen,
-                     "rdatamaps/world/9x9"),
-           recursive = TRUE)
+if (!dir.exists(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))) {
+  dir.create(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))
+  dir.create(file.path(Dir.Capfitogen, "rdatamaps/world/9x9"),
+             recursive = TRUE)
+}
 
 saveRDS(predictors,
         "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
