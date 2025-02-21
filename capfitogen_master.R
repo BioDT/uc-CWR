@@ -141,7 +141,7 @@ message("Downloading new or loading existing edaphic/soil variables")
 edaphic_variables <- FUN.DownEV(
   Dir = Dir.Data.Envir,
   target_resolution = c(250, 250),
-  Force = TRUE,
+  Force = FALSE,
   resample_to_match = bioclim_variables[[1]]
 )
 

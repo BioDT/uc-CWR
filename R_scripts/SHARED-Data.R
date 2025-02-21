@@ -452,18 +452,19 @@ FUN.DownEV <-
            resample_to_match = FALSE) {
     # define a file name
     FNAME <- file.path(Dir, "edaphic.nc")
+    message(FNAME)
     
     # check if file already exists and whether to overwrite
     if (!Force & file.exists(FNAME)) {
-      EV_ras <- stack(FNAME)
+      EV_ras <- rast(FNAME)
       message(
         "Data has already been downloaded. It has been loaded from the disk. If you wish to override the present data, please specify Force = TRUE"
       )
       return(EV_ras)
     }
     
-    # if the file doesn't already exist:
-    if (!file.exists(FNAME)) {
+    # if Force=TRUE or the file doesn't already exist:
+    if (Force | !file.exists(FNAME)) {
       ## download data from SoilGrids ----
       message("Start downloading data from SoilGrids: files.isric.org/soilgrids/latest/data/")
       soilGrids_url = "/vsicurl?max_retry=3&retry_delay=1&list_dir=no&url=https://files.isric.org/soilgrids/latest/data/"
@@ -558,8 +559,6 @@ FUN.DownEV <-
       }
       PH_toxicity <- rast(path_to_PH_toxicity)
       
-    }
-    
     ### resample ----
     ## if provided, resample to match another raster object's origin and resolution
     if (!missing(resample_to_match)) {
@@ -597,6 +596,7 @@ FUN.DownEV <-
     
     EV_rasters
     
+    }
   }
 
 # GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
