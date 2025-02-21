@@ -183,7 +183,8 @@ pasaporte_file_name = paste0(sub(pattern = " ",
 
 write.table(Species_ls[["occs"]],
             file.path("Capfitogen-main/Pasaporte",
-                      pasaporte_file_name))
+                      pasaporte_file_name),
+            sep = "\t",)
 
 pasaportest <- read.table("Capfitogen-main/Pasaporte/Lathyrus_angulatus.txt",
                           header = TRUE)
@@ -309,10 +310,15 @@ message("running Capfitogen Complementa tool for conservation areas")
 
 
 #' NB! Manually copied the script into the folder, as it is missing on GH...
-{ # run the script
-  source(file.path(Dir.Capfitogen, 
+#' NB! changed "" to " " in line 91:
+#' pasaporte<-read.delim(paste("Pasaporte/",pasaporte,sep=" "))
+#' 
+# run the script
+pasaporte <- pasaporte_file_name
+source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
-  setwd(Dir.Base)
-}
-# visualise output
+#' stops at line 173 mapaelcf if loop
+setwd(Dir.Base)
 
+
+# visualise output
