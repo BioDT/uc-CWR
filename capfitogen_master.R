@@ -161,19 +161,13 @@ if (!file.exists("capfitogen-main.zip")) {
   unzip(zipfile = "capfitogen-main.zip")
 }
 
-# define path to CAPFITOGEN folder
-Dir.Capfitogen = file.path(Dir.Base, "Capfitogen-main/")
-
-# make folder for storing error log
-if (!dir.exists(paste0(Dir.Results.ECLMap, "/Error"))) {
-  dir.create(paste0(Dir.Results.ECLMap, "/Error"))
-}
-
 ## Format GBIF data -----------------------------------------------------------
 # need a data frame named 'puntos' = points with occurrence points
 puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
                      POINT_X = Species_ls[["occs"]][["DECLONGITUDE"]],
                      POINT_Y = Species_ls[["occs"]][["DECLATITUDE"]])
+
+# create 'pasaporte' file
 
 
 ## Variable selection ---------------------------------------------------------
@@ -187,7 +181,7 @@ predictor_vifs <-
     all_predictors,# replace with either BV, EV, GV to run separately per type
     th = 0.8, # threshold of correlation
     keep = NULL, # if wanted, list variables to keep no matter what
-    size = 1000, # subset size in case of big data (default 5000)
+    size = 5000, # subset size in case of big data (default 5000)
     method = "pearson" # 'pearson','kendall','spearman'
   )
 
@@ -224,67 +218,71 @@ for (i in 1:dim(predictors)[3]) {
 }
 
 ## Parameters -----------------------------------------------------------------
-## copied and shortened from CAPFITOGEN scripts. 
-## TO to: DELETE UNNECESSARY PARAMS
-
-pais <- "World"
-#pasaporte <- file.path(Dir.Data.GBIF, "filename") # species observations - enter GBIF data file, check if column names work
-#geoqual <- FALSE # ?
-# totalqual<-60 #Only applies if geoqual=TRUE
+## used in CAPFITOGEN scripts below
+ruta <- Dir.Capfitogen # path to capfitogen scripts
+pais <- "World" # global extent - big modifications will be necessary to use different extent
+geoqual <- FALSE
+duplicat <- TRUE# duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
 distdup <- 1 # distance threshold in km to remove duplicates from same population
 resol1 <- "9x9" # resolution, change to 9x9
-#buffy <- FALSE # buffer zone?
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
-#percenRF <- 0.66 # percentage of variables that will be selected by Random Forest 
-#percenCorr <- 0.33 # percentage of variables that will be selected by the analysis of bivariate correlations, which is executed after the selection by Random Forest (for example, if you wanted to select 1/3 of the total of variables by bivariate correlations, percenRF would be 0.33
-#CorrValue <- 0.5 # correlation threshold value, above (in its positive form) or below (in its negative form) of which it is assumed that there is a correlation between two variables.
-#pValue <- 0.05 # significance threshold value for bivariate correlations.
-nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
-#ecogeopcaxe <- 4 # number of axes (principal components) that will be shown in the tables of eigenvectors, eigenvalues and the PCA scores. ecogeopcaxe cannot be greater than the smallest number of variables to be evaluated per component
-resultados <- Dir.Results.ECLMap # directory to place results
-ruta <- Dir.Capfitogen
+# nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
 
-## Clustering and map creation: ELCmapas ---------------------------------------
-message("Clustering and creating maps")
-
-# Set additional parameters
 bioclimv <- predictor_names[grep("BIO", predictor_names)] #
 edaphv <- names(geophysical_variables)#names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
-maxg <- 3 # maximum number of clusters per component 
+maxg <- 20 # maximum number of clusters per component 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
 
+# parameters for Complementa tool
+gaptype <- FALSE # Note: Representa tool a prerequisite of gaptype=TRUE 
+celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by cells (grid)
+resol1 <- "9x9"#"celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
+nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
+areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
+WDPA <- TRUE #Only applies if areas=TRUE
+#propio<-TRUE # =own, alternative user defined file instead of WDPA
+#nombre<-"EcuadorAreasProt" #Only applies if propio=TRUE, name of alternative shapefile
+#campo<-"objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
+nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
+coveran <- TRUE # if coveran=TRUE a coverage analysis will be generated for the network of protected areas and a folder called CoverageAnalysis should appear in the results within the resultados para areas folder 
+niveltax <- "species"# At which taxonomic level the complementarity analysis is going to run (3 options: "genus", "species" or "subtaxa"). Take into account the following: If "genus" is selected, , in the GENUS column of the passport table there must be at least two different genera, or the same for "species" (SPECIES column) or "subtaxa" (SUBTAXA column)... if there are only NA values or there is only one value in the target column, it can generate errors.
+datanatax <- FALSE # whether the NA values in genus, species or subtaxa will be taken into account as a different value. Any TRUE or FALSE option does not usually generate problems or errors.
+mapaelcf <- TRUE # Note: Will an ELC map from a previous execution of the ELCmapas tool be used as an additional factor for classifying the taxonomic ranks for the complementarity analysis?
+mapaelc <- "mapa_elc_world.grd" #Only applies if mapaelcf=TRUE, mapaelc must contain the name of the ELC map obtained by previously using the ELCmapas tool (.grd and .gri files that must always be in the CAPFITOGEN3/ELCmapas folder)
+datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in NA zones on the ELC map will be taken into account or not (FALSE)
+data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
+
+## Clustering and map creation: ELCmapas ---------------------------------------
+message("Clustering and creating maps")
+resultados <- Dir.Results.ECLMap # directory to place results
 # run the script
-## NB! Change made in capfitogen script: replaced extract with raster::extract (other package masked it and caused error)
+##' NB! Change made in capfitogen script: 
+##' replaced 'extract' with 'raster::extract' 
+##' (some other package masked it and caused an error)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
+setwd(Dir.Base)
 
-# visualise output
+# quick visualisation of output
+elc_tif_outputs <- list.files(path = Dir.Results.ECLMap,
+                              pattern = "*.tif")
 
-# below added by HJ, I'm not sure what it does
-# bioclim_cl <- FUN.KmeansClust(ext_values = bioclim_ext, 
-#                               max_clusters = 8, 
-#                               vartype = 'bioclim')
-# geophys_cl <- FUN.KmeansClust(ext_values = geophys_ext, 
-#                               max_clusters = 8, 
-#                               vartype = 'geophys')
-# edaph_cl <- FUN.KmeansClust(ext_values = edaph_ext, 
-#                             max_clusters = 8, 
-#                             vartype = 'edaph')
-#
-# HJ: function NOT READY yet, end of map creation doesn't work
-# maps <- FUN.ELCmaps(edaph = edaph_clust, 
-#                     bioclim = bioclim_clust, 
-#                     geophys = geophys_cl)
-# 
+for (i in elc_tif_outputs) {
+  map_i = rast(paste0(Dir.Results.ECLMap, 
+                      "/", i))
+  plot(map_i,
+       main = i)
+}
 
 ## Overlaying conservation maps "Complementa" ---------------------------------
-# set additional parameters
-#...
+message("running Capfitogen Complementa tool for conservation areas")
+resultados <- resultados <- Dir.Results.Complementa
 
 # run the script
+#' NB! Manually copied the script into the folder, as it is missing on GH...
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
 

@@ -122,9 +122,12 @@ Dir.Exports <- file.path(Dir.Base, "Exports")
 Dir.Exports.ModGP <- file.path(Dir.Exports, "ModGP")
 Dir.Exports.Capfitogen <- file.path(Dir.Exports, "Capfitogen")
 Dir.R_scripts <- file.path(Dir.Base, "R_scripts")
+Dir.Capfitogen <- file.path(Dir.Base, "Capfitogen-main")
 Dir.Results <- file.path(Dir.Base, "results")
-Dir.Results.SelectVar <- file.path(Dir.Results, "SelectVar")
 Dir.Results.ECLMap <- file.path(Dir.Results, "ECLMap")
+Dir.Results.ECLMap.Error <- file.path(Dir.Results.ECLMap, "Error")
+Dir.Results.Complementa <- file.path(Dir.Results, "Complementa")
+Dir.Results.Complementa.Error <- file.path(Dir.Results.Complementa, "Error")
 
 ### Create directories which aren't present yet
 Dirs <- grep(ls(), pattern = "Dir.", value = TRUE)
