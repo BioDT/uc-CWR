@@ -147,6 +147,7 @@ edaphic_variables <- FUN.DownEV(
 )
 
 ### Geophysical data ------
+message("Downloading new or loading existing geophysical variables")
 geophysical_variables <- FUN.DownGV(
   Dir = Dir.Data.Envir,
   Force = FALSE,
@@ -166,7 +167,7 @@ if (!file.exists(file.path(Dir.Results.Complementa.Error,"process_info.txt"))) {
   file.create(file.path(Dir.Results.Complementa.Error,"process_info.txt"))
 }
 
-## Format GBIF data -----------------------------------------------------------
+### Format GBIF data ----
 # need a data frame named 'puntos' = points with occurrence points
 puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
                      POINT_X = Species_ls[["occs"]][["DECLONGITUDE"]],
@@ -189,12 +190,27 @@ write.table(Species_ls[["occs"]],
 pasaportest <- read.table("Capfitogen-main/Pasaporte/Lathyrus_angulatus.txt",
                           header = TRUE)
 
+### Download protected areas ----
+#' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
+#' download shapefiles for protected areas to overlay with Complementa tool,
+#' from The World Database on Protected Areas 
+#' UNEP-WCMC and IUCN (2025), Protected Planet: The World Database on Protected 
+#' Areas (WDPA)[On-line], [February 2025], Cambridge, UK: UNEP-WCMC and IUCN. 
+#' Available at: https://doi.org/10.34892/6fwd-af11 
+#' NB! not working, no direct download link found
+wdpa_url = "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/The_World_Database_of_Protected_Areas/FeatureServer/1"
+wdpa_destination = file.path(Dir.Data.Capfitogen, 
+                             "wdpa")
+download.file(url = wdpa_url,
+              destfile = wdpa_destination)
+
 ## Variable selection ---------------------------------------------------------
-# run variable selection based on variable inflation factor usdm::vif
+# combine variables
 all_predictors <- c(bioclim_variables, 
                     #edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
                     geophysical_variables)
 
+# run variable selection based on variable inflation factor usdm::vif
 predictor_vifs <-
   vifcor(
     all_predictors,# replace with either BV, EV, GV to run separately per type
@@ -204,9 +220,9 @@ predictor_vifs <-
     method = "pearson" # 'pearson','kendall','spearman'
   )
 
+# check which variables are kept
 variables_to_keep <-
   names(all_predictors)[names(all_predictors) %nin% predictor_vifs@excluded]
-
 message("variables kept after excluding the most correlated ones:")
 print(variables_to_keep)
 
@@ -233,15 +249,17 @@ for (i in 1:dim(predictors)[3]) {
                              paste0(names(predictors[[i]]),".tif"))
   writeRaster(predictors[[i]],
               file_name_path,
-              overwrite=TRUE)
+              overwrite = TRUE)
 }
 
-## Parameters -----------------------------------------------------------------
-## used in CAPFITOGEN scripts below
+## Clustering and map creation: ELCmapas ---------------------------------------
+### Parameters for ELC maps ----
+{
 ruta <- Dir.Capfitogen # path to capfitogen scripts
-pais <- "World" # global extent - big modifications will be necessary to use different extent
+resultados <- Dir.Results.ELCMap # directory to place results
 pasaporte <- pasaporte_file_name # species occurrence data
 
+pais <- "World" # global extent - big modifications will be necessary to use different extent
 geoqual <- FALSE
 totalqual<-30 # Only applies if GEOQUAL=TRUE, must be a value between 0 and 100
 duplicat <- TRUE # duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
@@ -249,42 +267,18 @@ distdup <- 1 # distance threshold in km to remove duplicates from same populatio
 resol1 <- "9x9" # resolution, change to 9x9
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
-# nminvar <- 3 # minimum number of variables to select per component. For example, although the processes of variable selection by RF and bivariate correlation indicate that two variables will be selected, if the nminvar number is 3, the selection process by correlations will select the three least correlated variables.
 
 bioclimv <- predictor_names[grep("BIO", predictor_names)] #
 edaphv <- names(geophysical_variables)#names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
+
 maxg <- 20 # maximum number of clusters per component 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
-
-# parameters for Complementa tool
-gaptype <- FALSE # Note: Representa tool a prerequisite of gaptype=TRUE 
-gaptresh <- 4 #Only applies if gaptype=TRUE
-gapna <- "exclude" #Only applies if gaptype=TRUE
-celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by cells (grid)
-resol1 <- "9x9"#"celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
-nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
-areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
-WDPA <- TRUE #Only applies if areas=TRUE
-propio <- FALSE # =own, alternative user defined file instead of WDPA
-nombre <- "EcuadorAreasProt" #Only applies if propio=TRUE, name of alternative shapefile
-campo <- "objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
-nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
-coveran <- TRUE # if coveran=TRUE a coverage analysis will be generated for the network of protected areas and a folder called CoverageAnalysis should appear in the results within the resultados para areas folder 
-niveltax <- "species"# At which taxonomic level the complementarity analysis is going to run (3 options: "genus", "species" or "subtaxa"). Take into account the following: If "genus" is selected, , in the GENUS column of the passport table there must be at least two different genera, or the same for "species" (SPECIES column) or "subtaxa" (SUBTAXA column)... if there are only NA values or there is only one value in the target column, it can generate errors.
-datanatax <- FALSE # whether the NA values in genus, species or subtaxa will be taken into account as a different value. Any TRUE or FALSE option does not usually generate problems or errors.
-mapaelcf <- TRUE # Note: Will an ELC map from a previous execution of the ELCmapas tool be used as an additional factor for classifying the taxonomic ranks for the complementarity analysis?
-mapaelc <- "mapa_elc_world.grd" #Only applies if mapaelcf=TRUE, mapaelc must contain the name of the ELC map obtained by previously using the ELCmapas tool (.grd and .gri files that must always be in the CAPFITOGEN3/ELCmapas folder)
-datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in NA zones on the ELC map will be taken into account or not (FALSE)
-data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
-
-## Clustering and map creation: ELCmapas ---------------------------------------
-resultados <- Dir.Results.ECLMap # directory to place results
-
-message("Clustering and creating maps")
+}
 
 # run the script
+message("Clustering and creating maps")
 ##' NB! Change made in capfitogen script: 
 ##' replaced 'extract' with 'raster::extract' 
 ##' (some other package masked it and caused an error)
@@ -292,29 +286,88 @@ source(file.path(Dir.Capfitogen,
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 setwd(Dir.Base)
 
-# quick visualisation of output
-elc_tif_outputs <- list.files(path = Dir.Results.ECLMap,
-                              pattern = "*.tif")
+### quick visualisation of ELC maps ----
+# List all the .tif files in the directory
+elc_tif_outputs <- list.files(path = Dir.Results.ELCMap, 
+                              pattern = "\\.tif$", 
+                              full.names = TRUE)
 
-for (i in elc_tif_outputs) {
-  map_i = rast(paste0(Dir.Results.ECLMap, 
-                      "/", i))
-  plot(map_i,
-       main = i)
+# Loop over each .tif file
+for (file_path in elc_tif_outputs) {
+  # Read the raster file
+  map_i <- rast(file_path)
+  
+  # Replace NaN with NA (if they exist)
+  map_i[is.nan(values(map_i))] <- NA
+  
+  # Create a mask to highlight non-zero areas
+  non_zero_mask <- mask(map_i, !is.na(map_i))
+  
+  # Convert to points to find non-zero values' extent
+  points <- as.points(non_zero_mask, na.rm = TRUE)
+  
+  # If there are any valid points, proceed with cropping
+  if (!is.null(points) && nrow(points) > 0) {
+    # Calculate extent directly from the non-empty points
+    coordinates <- terra::geom(points)[, c("x", "y")]
+    xmin = min(coordinates[,"x"])
+    xmax = max(coordinates[,"x"])
+    ymin = min(coordinates[,"y"])
+    ymax = max(coordinates[,"y"])
+    non_zero_extent <- ext(xmin, xmax, ymin, ymax)
+    
+    # Crop the raster using this extent
+    cropped_map <- crop(map_i, non_zero_extent)
+    
+    # Plot the cropped raster
+    plot(cropped_map, main = basename(file_path))
+  } else {
+    plot(map_i, main = paste(basename(file_path), "(No non-zero values)"))
+  }
 }
 
 ## Overlaying conservation maps "Complementa" ---------------------------------
+### parameters for Complementa ----
+{
 resultados <- Dir.Results.Complementa
+pasaporte <- pasaporte_file_name
+
+gaptype <- FALSE # Note: Representa tool a prerequisite of gaptype=TRUE 
+gaptresh <- 4 #Only applies if gaptype=TRUE
+gapna <- "exclude" #Only applies if gaptype=TRUE
+
+celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by cells (grid)
+resol1 <- "celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
+nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
+
+areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
+WDPA <- TRUE #Only applies if areas=TRUE
+propio <- FALSE # =own, alternative user defined file instead of WDPA
+nombre <- "nameOfAlternativeShapefile" #Only applies if propio=TRUE, name of alternative shapefile
+campo <- "objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
+nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
+coveran <- TRUE # if coveran=TRUE a coverage analysis will be generated for the network of protected areas and a folder called CoverageAnalysis should appear in the results within the resultados para areas folder 
+
+niveltax <- "species"# At which taxonomic level the complementarity analysis is going to run (3 options: "genus", "species" or "subtaxa"). Take into account the following: If "genus" is selected, , in the GENUS column of the passport table there must be at least two different genera, or the same for "species" (SPECIES column) or "subtaxa" (SUBTAXA column)... if there are only NA values or there is only one value in the target column, it can generate errors.
+datanatax <- FALSE # whether the NA values in genus, species or subtaxa will be taken into account as a different value. Any TRUE or FALSE option does not usually generate problems or errors.
+
+mapaelcf <- TRUE # Note: Will an ELC map from a previous execution of the ELCmapas tool be used as an additional factor for classifying the taxonomic ranks for the complementarity analysis?
+mapaelc <- "mapa_elc_world.grd" #Only applies if mapaelcf=TRUE, mapaelc must contain the name of the ELC map obtained by previously using the ELCmapas tool (.grd and .gri files that must always be in the CAPFITOGEN3/ELCmapas folder)
+datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in NA zones on the ELC map will be taken into account or not (FALSE)
+data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
+}
 
 message("running Capfitogen Complementa tool for conservation areas")
 
-
 #' NB! Manually copied the script into the folder, as it is missing on GH...
-#' NB! changed "" to " " in line 91:
-#' pasaporte<-read.delim(paste("Pasaporte/",pasaporte,sep=" "))
+#' Changed in the script:
+#' - replaced 'extract' with 'raster::extract' 
+#' - line ~576 tabla_especies<-puntosorigshp@data 
+#'   is a problem. "no applicable method for `@` applied to an object of class "sf""
+#'   replaced it with as.data.frame(puntosorigshp)
 #' 
 # run the script
-pasaporte <- pasaporte_file_name
+setwd(Dir.Base)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
 #' stops at line 173 mapaelcf if loop
