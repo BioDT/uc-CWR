@@ -340,7 +340,7 @@ celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by
 resol1 <- "celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
 nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
 
-areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
+areas <- FALSE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
 WDPA <- TRUE #Only applies if areas=TRUE
 propio <- FALSE # =own, alternative user defined file instead of WDPA
 nombre <- "nameOfAlternativeShapefile" #Only applies if propio=TRUE, name of alternative shapefile
@@ -370,8 +370,30 @@ message("running Capfitogen Complementa tool for conservation areas")
 setwd(Dir.Base)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
-#' stops at line 173 mapaelcf if loop
+#' works if areas = FALSE !
 setwd(Dir.Base)
 
+### quick visualisation ----
+complementa_map <- rast(
+  file.path(Dir.Results.Complementa,
+            "AnalisisCeldas_CellAnalysis/Complementa_map.tif"))
+plot(complementa_map)
+complementa_map[is.nan(values(complementa_map))] <- NA
+non_zero_mask <- mask(complementa_map,
+                      !is.na(complementa_map))
+complementa_points <- as.points(non_zero_mask, na.rm = TRUE)
+plot(complementa_points)
 
-# visualise output
+library(maps)
+
+map(
+  'world',
+  col = "grey",
+  fill = TRUE,
+  bg = "white",
+  lwd = 0.05,
+  mar = rep(0, 4),
+  border = 0,
+  ylim = c(-80, 80)
+)
+points(complementa_points)
