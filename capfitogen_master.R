@@ -105,15 +105,18 @@ Species_ls <- FUN.DownGBIF(
 ##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
 message("Downloading new or loading existing 19 BioClim bioclimatic variables")
 bioclim_variables <- FUN.DownBV(
-  T_Start = 1999, # what year to begin climatology calculation in
-  T_End = 1999, # what year to end climatology calculation in
+  T_Start = 1999, # what year to begin climatology calculation?
+  T_End = 1999, # what year to end climatology calculation?
   Dir = Dir.Data.Envir, # where to store the data output on disk
   Force = FALSE # do not overwrite already present data
   )
 
-bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
+# or use an existing data set (from Erik?) for testing...
+# bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
+
+# make sure the BioClim data have the correct names
 BioClim_names <- c( 
-  ## BioClim variable names, see https://www.worldclim.org/data/bioclim.html
+  # see https://www.worldclim.org/data/bioclim.html
   "BIO1_Annual_Mean_Temperature",
   "BIO2_Mean_Diurnal_Range",
   "BIO3_Isothermality",
@@ -174,8 +177,9 @@ puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
                      POINT_Y = Species_ls[["occs"]][["DECLATITUDE"]])
 
 ### create 'pasaporte' ----
-#' pasaporte file uses Darwincore names? 
-#' So it should be OK to use the occurrences from the GBIF download directly.
+#' Capfitogen uses a file named "pasaporte" with species/taxa occurrences. 
+#' The file uses Darwincore names, so it should be OK to use the occurrences 
+#' from the GBIF download directly. 
 #' Place it in the right folder so Capfitogen can find it:
 pasaporte_file_name = paste0(sub(pattern = " ",
                                  replacement = "_",
@@ -251,26 +255,27 @@ if (!file.exists(wdpa_destination)) {
                                              full.names = TRUE) %nin% files_to_keep]
   file.remove(files_to_delete, 
               recursive = TRUE)
+  
+  # merge parts into one global shapefile
+  wdpa_polygon_shapefiles <-
+    substr(unique(sub("\\..*", "",
+                      list.files(wdpa_path)[grep(pattern = "polygon",
+                                                 x = all_wdpa_shapefiles)])),
+           3, 34)
+  shapefile_list <- list()
+  for (i in 0:2) {
+    layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
+    shapefile_list[[i + 1]] <-
+      read_sf(dsn = wdpa_path, layer = layer_name)
+  }
+  message("combining parts of the WDPA shapefile. This can take a while ---")
+  wdpa <- do.call(rbind, shapefile_list)
+  
+  # save complete wdpa
+  message("Complete WDPA successfully combined. Saving it as global_wdpa_polygons.shp")
+  st_write(wdpa,
+           file.path(wdpa_path, "global_wdpa_polygons.shp"))
 }
-
-# merge parts into one global shapefile
-wdpa_polygon_shapefiles <-
-  substr(unique(sub("\\..*", "",
-                    list.files(wdpa_path)[grep(pattern = "polygon",
-                                               x = all_wdpa_shapefiles)])),
-         3, 34)
-shapefile_list <- list()
-for (i in 0:2) {
-  layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
-  shapefile_list[[i + 1]] <-
-    read_sf(dsn = wdpa_path, layer = layer_name)
-}
-
-wdpa <- do.call(rbind, shapefile_list)
-
-# save global wdpa 
-st_write(wdpa,
-         file.path(wdpa_path, "global_wdpa_polygons.shp"))
 
 ## Variable selection ---------------------------------------------------------
 # combine variables
@@ -408,7 +413,7 @@ nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from m
 areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
 WDPA <- FALSE #Only applies if areas=TRUE
 propio <- TRUE # =own, alternative user defined file instead of WDPA
-nombre <- "nameOfAlternativeShapefile" #Only applies if propio=TRUE, name of alternative shapefile
+nombre <- "global_wdpa_polygons.shp" #Only applies if propio=TRUE, name of alternative shapefile
 campo <- "objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
 nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
 coveran <- TRUE # if coveran=TRUE a coverage analysis will be generated for the network of protected areas and a folder called CoverageAnalysis should appear in the results within the resultados para areas folder 
