@@ -158,7 +158,7 @@ geophysical_variables <- FUN.DownGV(
 ## Download CAPFITOGEN scripts ------------------------------------------------
 # download and unzip CAPFITOGEN repository
 if (!file.exists("capfitogen-main.zip")) {
-  download.file(url = "https://github.com/HMauricioParra/Capfitogen/archive/refs/heads/main.zip",
+  download.file(url = "https://github.com/evalieungh/Capfitogen/archive/refs/heads/main.zip",
               destfile = "capfitogen-main.zip")
   unzip(zipfile = "capfitogen-main.zip")
 }
@@ -187,22 +187,90 @@ write.table(Species_ls[["occs"]],
                       pasaporte_file_name),
             sep = "\t",)
 
-pasaportest <- read.table("Capfitogen-main/Pasaporte/Lathyrus_angulatus.txt",
-                          header = TRUE)
-
 ### Download protected areas ----
 #' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
-#' download shapefiles for protected areas to overlay with Complementa tool,
-#' from The World Database on Protected Areas 
-#' UNEP-WCMC and IUCN (2025), Protected Planet: The World Database on Protected 
-#' Areas (WDPA)[On-line], [February 2025], Cambridge, UK: UNEP-WCMC and IUCN. 
-#' Available at: https://doi.org/10.34892/6fwd-af11 
-#' NB! not working, no direct download link found
-wdpa_url = "https://data-gis.unep-wcmc.org/server/rest/services/ProtectedSites/The_World_Database_of_Protected_Areas/FeatureServer/1"
+#' download shapefiles for protected areas to overlay with Complementa tool:
+#' UNEP-WCMC and IUCN (2025), Protected Planet: 
+#' The World Database on Protected Areas (WDPA) [Online], February 2025, 
+#' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
+wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip"
 wdpa_destination = file.path(Dir.Data.Capfitogen, 
-                             "wdpa")
-download.file(url = wdpa_url,
-              destfile = wdpa_destination)
+                             "WDPA_Feb2025_Public_shp.zip")
+# if the file isn't there already, download it
+if (!file.exists(wdpa_destination)) {
+  message("downloading zipped WDPA shapefiles, ca 4GB")
+  # set long timeout to avoid interrupting download
+  options(timeout = 1000)
+  # download the zipped files
+  download.file(url = wdpa_url,
+                destfile = wdpa_destination,
+                cacheOK = FALSE)
+  # unzip files
+  message(paste("unzipping WDPA shapefiles to", Dir.Data.Capfitogen))
+  unzip(zipfile = wdpa_destination,
+        exdir = Dir.Data.Capfitogen)
+  # unzip split shapefile downloads
+  message("unzipping shapefiles split in download")
+  wdpa_path <- file.path(Dir.Data.Capfitogen, "wdpa")
+  shapefile_names <- c(
+    "WDPA_Feb2025_Public_shp-points.cpg",
+    "WDPA_Feb2025_Public_shp-points.dbf",
+    "WDPA_Feb2025_Public_shp-points.prj",
+    "WDPA_Feb2025_Public_shp-points.shp",
+    "WDPA_Feb2025_Public_shp-points.shx",
+    "WDPA_Feb2025_Public_shp-polygons.cpg",
+    "WDPA_Feb2025_Public_shp-polygons.dbf",
+    "WDPA_Feb2025_Public_shp-polygons.prj",
+    "WDPA_Feb2025_Public_shp-polygons.shp",
+    "WDPA_Feb2025_Public_shp-polygons.shx")
+  shapefile_paths <- file.path(wdpa_path,
+                               shapefile_names)
+  for (i in 0:2) {
+    # define name of the current directory to be unzipped
+    zipfilename <- 
+      file.path(Dir.Data.Capfitogen,
+                paste0("WDPA_Feb2025_Public_shp_", i, ".zip"))
+    # unzip the directory containing shapefiles
+    unzip(zipfile = zipfilename,
+          exdir = wdpa_path)
+    # rename shapefiles with numbers to prevent overwriting them
+    new_shapefile_names <- file.path(wdpa_path,
+                                     paste0(i, "_",
+                                            shapefile_names))
+    file.rename(from = shapefile_paths,
+                to = new_shapefile_names)
+  }
+  # delete unnecessary files
+  files_to_keep <- c(wdpa_path,
+                     wdpa_destination,
+                     file.path(Dir.Data.Capfitogen,
+                               "WDPA_sources_Feb2025.csv"))
+  files_to_delete <-
+    list.files(Dir.Data.Capfitogen,
+               full.names = TRUE)[list.files(Dir.Data.Capfitogen,
+                                             full.names = TRUE) %nin% files_to_keep]
+  file.remove(files_to_delete, 
+              recursive = TRUE)
+}
+
+# merge parts into one global shapefile
+wdpa_polygon_shapefiles <-
+  substr(unique(sub("\\..*", "",
+                    list.files(wdpa_path)[grep(pattern = "polygon",
+                                               x = all_wdpa_shapefiles)])),
+         3, 34)
+shapefile_list <- list()
+for (i in 0:2) {
+  layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
+  shapefile_list[[i + 1]] <-
+    read_sf(dsn = wdpa_path, layer = layer_name)
+}
+
+wdpa <- do.call(rbind, shapefile_list)
+
+# save global wdpa 
+st_write(wdpa,
+         file.path(wdpa_path, "global_wdpa_polygons.shp"))
 
 ## Variable selection ---------------------------------------------------------
 # combine variables
@@ -279,9 +347,6 @@ iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calcul
 
 # run the script
 message("Clustering and creating maps")
-##' NB! Change made in capfitogen script: 
-##' replaced 'extract' with 'raster::extract' 
-##' (some other package masked it and caused an error)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
 setwd(Dir.Base)
@@ -340,9 +405,9 @@ celdas <- TRUE # Note: If celdas=TRUE, a complementarity analysis will be run by
 resol1 <- "celdas 10x10 km aprox (5 arc-min)" #Only applies if celdas=TRUE
 nceldas <- 10 #Only applies if celdas=TRUE, number of cells in a ranking (from most to least important in terms of taxa richness accumulation)
 
-areas <- FALSE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
-WDPA <- TRUE #Only applies if areas=TRUE
-propio <- FALSE # =own, alternative user defined file instead of WDPA
+areas <- TRUE # If areas=TRUE, a complementary analysis will be run per protected areas (polygons), which can come from a world database (WDPA) or from a shapefile provided by the user. If areas=TRUE, at least one of the following two options (or both), WDPA or propio, must be TRUE, otherwise it may cause errors.
+WDPA <- FALSE #Only applies if areas=TRUE
+propio <- TRUE # =own, alternative user defined file instead of WDPA
 nombre <- "nameOfAlternativeShapefile" #Only applies if propio=TRUE, name of alternative shapefile
 campo <- "objectid" #Only applies if propio=TRUE, in campo you must specify the column of the shapefile table that contains the identifier code (ID) of each object (polygon) in the map of protected areas that the user provides through the shapefile. The name of the column must be inserted as it appears in the shapefile table, otherwise errors are generated
 nareas <- 5 # the number of protected areas where the points from the passport table coordinates fall, areas organized in a ranking (from most to least important in terms of accumulation of taxa richness) that will be analyzed in detail. It can generate a problem or error if nareas is a very large number and the passport table has few records, or few different species, or all the points are highly concentrated spatially. 
@@ -357,16 +422,8 @@ datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the
 data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
 }
 
-message("running Capfitogen Complementa tool for conservation areas")
-
-#' NB! Manually copied the script into the folder, as it is missing on GH...
-#' Changed in the script:
-#' - replaced 'extract' with 'raster::extract' 
-#' - line ~576 tabla_especies<-puntosorigshp@data 
-#'   is a problem. "no applicable method for `@` applied to an object of class "sf""
-#'   replaced it with as.data.frame(puntosorigshp)
-#' 
 # run the script
+message("running Capfitogen Complementa tool for conservation areas")
 setwd(Dir.Base)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
