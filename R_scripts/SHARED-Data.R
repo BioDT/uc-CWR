@@ -20,7 +20,7 @@ FUN.DownGBIF <- function(
 ){
 	## Preparing species name identifiers
 	input_species <- species
-	
+
 	## Focusing on Genus-part of the name if Mode is set to ModGP
 	if(Mode == "ModGP"){
 		species <- strsplit(input_species, " ")[[1]][1]
@@ -36,6 +36,7 @@ FUN.DownGBIF <- function(
 	
 	## Function start
 	message("Starting GBIF data retrieval")
+  
 	## GBIF taxa Query ----
 	if(Mode == "ModGP"){
 		message(paste("## Resolving", species, "at genus level"))
@@ -268,7 +269,7 @@ FUN.DownGBIF <- function(
 	JSON_ls$`@graph`[[3]]$contentSize <- file.size(FNAME)
 	JSON_ls$`@graph`[[3]]$encodingFormat <- "application/RData"
 	JSON_ls$`@graph`[[3]]$`@id` <- basename(FNAME)
-	
+
 	JSON_ls$`@graph`[[4]]$name <- c(as.character(options("gbif_user")), 
 	                                JSON_ls$`@graph`[[4]]$name)
 	JSON_ls$`@graph`[[4]]$`@id` <- c(JSON_ls$`@graph`[[4]]$`@id`, 
@@ -278,6 +279,7 @@ FUN.DownGBIF <- function(
 	
 	JSON_ls$`@graph`[[5]]$agent$`@id` <- c(JSON_ls$`@graph`[[5]]$agent$`@id`, 
 	                                       as.character(options("gbif_email")))
+
 	JSON_ls$`@graph`[[5]]$instrument$`@id` <- "https://github.com/BioDT/uc-CWR"
 	
 	con <- file(file.path(Dir, paste0(species, ".json")))
@@ -747,7 +749,3 @@ FUN.DownGV <-
 #     overwrite = TRUE,
 #     silent = FALSE
 #   )
-# 
-
-
-

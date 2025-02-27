@@ -8,16 +8,10 @@ install.load.package <- function(x) {
 		install.packages(x, repos='http://cran.us.r-project.org')
 	require(x, character.only = TRUE)
 }
-
-# HJ: to do: remove unneeded packages
-# EL: trying to comment out some now to test if we run into issues
-
 ### CRAN PACKAGES ----
 package_vec <- c(
   'automap', # automatic interpolation (for KrigR)
   'cowplot', # grid plotting
-  'exactextractr', # HJ: added to solve extraction problems
-  #'geodata', # HJ: added to get soil data for testing
   'ggplot2', # ggplot machinery
   'ggpp',
   'ggpmisc', # table plotting in ggplot environment
@@ -55,7 +49,6 @@ package_vec <- c(
   
   # Capfitogen ECLmapas packages
   # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
-  'modeltools',
   'flexmix',
   'fpc',
   'vegan',
@@ -137,3 +130,5 @@ CreateDir <- sapply(Dirs, function(x){
 	x <- eval(parse(text=x))
 	if(!dir.exists(x)) dir.create(x)})
 rm(Dirs)
+
+# End of file
