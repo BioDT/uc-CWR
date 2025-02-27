@@ -192,6 +192,8 @@ write.table(Species_ls[["occs"]],
             sep = "\t",)
 
 ### Download protected areas ----
+#' NB! This download is large and combining big shapefiles requires 
+#' more computing power than should be done on a normal computer.
 #' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
 #' download shapefiles for protected areas to overlay with Complementa tool:
 #' UNEP-WCMC and IUCN (2025), Protected Planet: 
