@@ -166,18 +166,6 @@ geophysical_variables <- FUN.DownGV(
 )
 
 # CAPFITOGEN pipeline =========================================================
-## Download CAPFITOGEN scripts ------------------------------------------------
-# download and unzip CAPFITOGEN repository
-if (!file.exists("capfitogen-main.zip")) {
-  download.file(url = "https://github.com/evalieungh/Capfitogen/archive/refs/heads/main.zip",
-              destfile = "capfitogen-main.zip")
-  unzip(zipfile = "capfitogen-main.zip")
-}
-
-if (!file.exists(file.path(Dir.Results.Complementa.Error,"process_info.txt"))) {
-  file.create(file.path(Dir.Results.Complementa.Error,"process_info.txt"))
-}
-
 ### Format GBIF data ----
 # need a data frame named 'puntos' = points with occurrence points
 puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
@@ -254,6 +242,7 @@ if (!file.exists(wdpa_destination)) {
     file.rename(from = shapefile_paths,
                 to = new_shapefile_names)
   }
+  
   # delete unnecessary files
   files_to_keep <- c(wdpa_path,
                      wdpa_destination,
@@ -409,6 +398,11 @@ for (file_path in elc_tif_outputs) {
 }
 
 ## Overlaying conservation maps "Complementa" ---------------------------------
+#' create template file for logging script processes
+if (!file.exists(file.path(Dir.Results.Complementa.Error,"process_info.txt"))) {
+  file.create(file.path(Dir.Results.Complementa.Error,"process_info.txt"))
+}
+
 ### parameters for Complementa ----
 {
 resultados <- Dir.Results.Complementa
