@@ -7,17 +7,11 @@ install.load.package <- function(x) {
 	if (!require(x, character.only = TRUE))
 		install.packages(x, repos='http://cran.us.r-project.org')
 	require(x, character.only = TRUE)
-}
-
-# HJ: to do: remove unneeded packages
-# EL: trying to comment out some now to test if we run into issues
 
 ### CRAN PACKAGES ----
 package_vec <- c(
   'automap', # automatic interpolation (for KrigR)
   'cowplot', # grid plotting
-  'exactextractr', # HJ: added to solve extraction problems
-  #'geodata', # HJ: added to get soil data for testing
   'ggplot2', # ggplot machinery
   'ggpp',
   'ggpmisc', # table plotting in ggplot environment

@@ -3,7 +3,7 @@
 #' CONTENTS: 
 #'  - Execution of ModGP pipeline
 #'  DEPENDENCIES:
-#'  - R Scripts directory containing:
+#'  - R_scripts directory containing:
 #'  	- "ModGP-Outputs.R"
 #'  	- "ModGP-SDM.R"
 #'  	- "SHARED-APICredentials.R" 

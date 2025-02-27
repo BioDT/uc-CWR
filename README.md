@@ -4,7 +4,6 @@
 
 1. Source `ModGP_MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus. NB! ModGP should be run on a supercomputer. The environmental data download has very large interim files (>40GB per year per variable, >200 GB overall), and the distribution modelling also requires a long time to run.
 
-
 ## ModGP on LUMI with Hyperqueue
 
 1. Install HyperQueue:
@@ -15,7 +14,7 @@
 
 2. Fetch the container:
 
-       singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.4.4
+       singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.5.3
 
 3. Submit calculation job for a desired species (e.g. Lathyrus):
 
