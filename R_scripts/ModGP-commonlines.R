@@ -36,16 +36,15 @@ package_vec <- c(
   'iterators',
   'gdalUtilities', # to download from SoilGrids (FUN.DownEV)
   
-  # Capfitogen SelectVar packages 
-  # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
-  'dismo',
-  'cluster',
-  'ade4',
-  'labdsv',
-  'mclust',
-  'clustvarsel',
-  #'randomForest', # ---------------- replace with ranger?
-  'ranger',
+  # # Capfitogen SelectVar packages 
+  # # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
+  # 'dismo',
+  # 'cluster',
+  # 'ade4',
+  # 'labdsv',
+  # 'mclust',
+  # 'clustvarsel',
+  # 'ranger',
   
   # Capfitogen ECLmapas packages
   # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
