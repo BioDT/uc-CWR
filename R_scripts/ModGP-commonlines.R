@@ -7,7 +7,7 @@ install.load.package <- function(x) {
 	if (!require(x, character.only = TRUE))
 		install.packages(x, repos='http://cran.us.r-project.org')
 	require(x, character.only = TRUE)
-
+}
 ### CRAN PACKAGES ----
 package_vec <- c(
   'automap', # automatic interpolation (for KrigR)
@@ -49,7 +49,6 @@ package_vec <- c(
   
   # Capfitogen ECLmapas packages
   # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
-  'modeltools',
   'flexmix',
   'fpc',
   'vegan',
@@ -131,3 +130,5 @@ CreateDir <- sapply(Dirs, function(x){
 	x <- eval(parse(text=x))
 	if(!dir.exists(x)) dir.create(x)})
 rm(Dirs)
+
+# End of file

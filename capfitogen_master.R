@@ -104,12 +104,20 @@ Species_ls <- FUN.DownGBIF(
 ##' Will this download Global Multi-resolution Terrain Elevation Data (GMTED2010) as well?
 ##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
 message("Downloading new or loading existing 19 BioClim bioclimatic variables")
-bioclim_variables <- FUN.DownBV(
-  T_Start = 1999, # what year to begin climatology calculation?
-  T_End = 1999, # what year to end climatology calculation?
-  Dir = Dir.Data.Envir, # where to store the data output on disk
-  Force = FALSE # do not overwrite already present data
+
+# Check for existing BioClim data file
+existing_bioclim_file <- file.path(Dir.Data.Envir, "BV_1985-2015.nc")
+if (file.exists(existing_bioclim_file)) {
+  message("Using existing BioClim data")
+  bioclim_variables <- terra::rast(existing_bioclim_file)
+} else {
+  bioclim_variables <- FUN.DownBV(
+    T_Start = 1999, # what year to begin climatology calculation?
+    T_End = 1999, # what year to end climatology calculation?
+    Dir = Dir.Data.Envir, # where to store the data output on disk
+    Force = FALSE # do not overwrite already present data
   )
+}
 
 # or use an existing data set (from Erik?) for testing...
 # bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
