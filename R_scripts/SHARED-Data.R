@@ -700,10 +700,6 @@ FUN.DownGV <-
     }
   }
 
-
-
-
-
 # WGS84 = EPSG:4326
 ## Download digital elevation model (DEM) from 
 ##' Jarvis A., H.I. Reuter, A. Nelson, E. Guevara, 2008, Hole-filled 

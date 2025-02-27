@@ -198,7 +198,7 @@ write.table(Species_ls[["occs"]],
 #' The World Database on Protected Areas (WDPA) [Online], February 2025, 
 #' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
 wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip"
-wdpa_destination = file.path(Dir.Data.Capfitogen, 
+wdpa_destination = file.path(Dir.Capfitogen.WDPA, 
                              "WDPA_Feb2025_Public_shp.zip")
 # if the file isn't there already, download it
 if (!file.exists(wdpa_destination)) {
@@ -210,12 +210,12 @@ if (!file.exists(wdpa_destination)) {
                 destfile = wdpa_destination,
                 cacheOK = FALSE)
   # unzip files
-  message(paste("unzipping WDPA shapefiles to", Dir.Data.Capfitogen))
+  message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
   unzip(zipfile = wdpa_destination,
-        exdir = Dir.Data.Capfitogen)
+        exdir = Dir.Capfitogen.WDPA)
   # unzip split shapefile downloads
   message("unzipping shapefiles split in download")
-  wdpa_path <- file.path(Dir.Data.Capfitogen, "wdpa")
+  wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
   shapefile_names <- c(
     "WDPA_Feb2025_Public_shp-points.cpg",
     "WDPA_Feb2025_Public_shp-points.dbf",
@@ -247,23 +247,25 @@ if (!file.exists(wdpa_destination)) {
   # delete unnecessary files
   files_to_keep <- c(wdpa_path,
                      wdpa_destination,
-                     file.path(Dir.Data.Capfitogen,
+                     file.path(Dir.Capfitogen.WDPA,
                                "WDPA_sources_Feb2025.csv"))
   files_to_delete <-
-    list.files(Dir.Data.Capfitogen,
-               full.names = TRUE)[list.files(Dir.Data.Capfitogen,
+    list.files(Dir.Capfitogen.WDPA,
+               full.names = TRUE)[list.files(Dir.Capfitogen.WDPA,
                                              full.names = TRUE) %nin% files_to_keep]
   file.remove(files_to_delete, 
               recursive = TRUE)
   
   # merge parts into one global shapefile
-  wdpa_polygon_shapefiles <-
+  wdpa_polygon_shapefiles <- 
+    # list polygon shapefiles in WDPA directory
     substr(unique(sub("\\..*", "",
                       list.files(wdpa_path)[grep(pattern = "polygon",
                                                  x = all_wdpa_shapefiles)])),
            3, 34)
   shapefile_list <- list()
   for (i in 0:2) {
+    # read in all the polygon shapefile layers
     layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
     shapefile_list[[i + 1]] <-
       read_sf(dsn = wdpa_path, layer = layer_name)
