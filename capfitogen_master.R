@@ -191,7 +191,9 @@ write.table(Species_ls[["occs"]],
             sep = "\t",)
 
 ### Download protected areas ----
-#' download shapefiles for protected areas to overlay with Complementa tool
+#' download shapefiles for protected areas to overlay with Complementa tool.
+#' The FUN.DownWDPA function will save the file to a folder, but not load it 
+#' into RStudio as an object.
 FUN.DownWDPA(
   # download from url:
   wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
@@ -281,46 +283,6 @@ source(file.path(Dir.Capfitogen,
                  "scripts/Tools Herramientas/ELCmapas.R"))
 setwd(Dir.Base)
 
-### quick visualisation of ELC maps ----
-# List all the .tif files in the directory
-elc_tif_outputs <- list.files(path = Dir.Results.ELCMap, 
-                              pattern = "\\.tif$", 
-                              full.names = TRUE)
-
-# Loop over each .tif file
-for (file_path in elc_tif_outputs) {
-  # Read the raster file
-  map_i <- rast(file_path)
-  
-  # Replace NaN with NA (if they exist)
-  map_i[is.nan(values(map_i))] <- NA
-  
-  # Create a mask to highlight non-zero areas
-  non_zero_mask <- mask(map_i, !is.na(map_i))
-  
-  # Convert to points to find non-zero values' extent
-  points <- as.points(non_zero_mask, na.rm = TRUE)
-  
-  # If there are any valid points, proceed with cropping
-  if (!is.null(points) && nrow(points) > 0) {
-    # Calculate extent directly from the non-empty points
-    coordinates <- terra::geom(points)[, c("x", "y")]
-    xmin = min(coordinates[,"x"])
-    xmax = max(coordinates[,"x"])
-    ymin = min(coordinates[,"y"])
-    ymax = max(coordinates[,"y"])
-    non_zero_extent <- ext(xmin, xmax, ymin, ymax)
-    
-    # Crop the raster using this extent
-    cropped_map <- crop(map_i, non_zero_extent)
-    
-    # Plot the cropped raster
-    plot(cropped_map, main = basename(file_path))
-  } else {
-    plot(map_i, main = paste(basename(file_path), "(No non-zero values)"))
-  }
-}
-
 ## Overlaying conservation maps "Complementa" ---------------------------------
 #' create template file for logging script processes
 if (!file.exists(file.path(Dir.Results.Complementa.Error,"process_info.txt"))) {
@@ -365,25 +327,3 @@ source(file.path(Dir.Capfitogen,
 
 setwd(Dir.Base)
 
-### quick visualisation ----
-complementa_map <- rast(
-  file.path(Dir.Results.Complementa,
-            "AnalisisCeldas_CellAnalysis/Complementa_map.tif"))
-plot(complementa_map)
-complementa_map[is.nan(values(complementa_map))] <- NA
-non_zero_mask <- mask(complementa_map,
-                      !is.na(complementa_map))
-complementa_points <- as.points(non_zero_mask, na.rm = TRUE)
-plot(complementa_points)
-
-map(
-  'world',
-  col = "grey",
-  fill = TRUE,
-  bg = "white",
-  lwd = 0.05,
-  mar = rep(0, 4),
-  border = 0,
-  ylim = c(-80, 80)
-)
-points(complementa_points)
