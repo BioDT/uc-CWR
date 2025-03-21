@@ -5,7 +5,7 @@
 #'  - Bioclimatic Variable Climatology creation for qsoil1 and qsoil2 combined
 #'  DEPENDENCIES:
 #'  - None
-#' AUTHOR: [Erik Kusch]
+#' AUTHORS: [Erik Kusch, Eva Lieungh]
 #' ####################################################################### #
 
 # GBIF DOWNLOAD FUNCTION --------------------------------------------------
@@ -819,18 +819,27 @@ FUN.DownWDPA <-  function(
     # merge parts into one global shapefile
     message("combining parts of the WDPA shapefile. This can take a while ---")
     wdpa <- do.call(rbind, shapefile_list)
-    
-    # save complete wdpa
     message("Complete WDPA successfully combined.")
-    st_write(wdpa,
-             FNAME)
-    #' ERROR +
-    #' Warning messages:
-    #'   1: In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  ... :
-    #'                         GDAL Message 1: One or several characters couldn't be converted correctly from UTF-8 to ISO-8859-1.  This warning will not be emitted anymore.
-    #' 2: In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  ... :
-    #'   GDAL Message 1: Value 555510160 of field WDPAID of feature 114424 not successfully written. Possibly due to too larger number with respect to field width
-    message("WDPA saved as global_wdpa_polygons.shp")
+    
+    # wdpa$WDPAID <- as.character(wdpa$WDPAID)
+    # wdpa$text_field <- iconv(wdpa$text_field, to = "ASCII//TRANSLIT")
+
+    # save complete wdpa
+    message("save as GeoPackage")
+    st_write(wdpa, file.path(wdpa_path, "global_wdpa_polygons.gpkg"))
+    message(paste0("global WDPA saved as: ", 
+                   file.path(wdpa_path, "global_wdpa_polygons.gpkg")))
+    
+    message("save as shapefile")
+    #st_write(wdpa, FNAME)
+    st_write(
+      wdpa,
+      "global_wdpa_polygons.shp",
+      layer_options = "ENCODING=UTF-8",
+      field_type = c(WDPAID = "Character")
+    )
+    message("global WDPA saved as global_wdpa_polygons.shp")
   }
 }
 
+# end
