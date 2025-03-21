@@ -481,16 +481,16 @@ FUN.DownEV <-
       
       SoilGrids_variables_in <-
         c("bdod/bdod_0-5cm_mean", # Bulk density of the fine earth fraction, cg/cm³
-          "cec/cec_0-5cm_mean")#, # Cation Exchange Capacity of the soil, 	mmol(c)/kg
-      #"cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
-      #"silt/silt_0-5cm_mean")#, # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
-      #"clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
-      #"sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
-      #"nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
-      #"phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
-      #"ocd/ocd_0-5cm_mean",# Organic carbon density 	hg/m³
-      #"ocs/ocs_0-30cm_mean",# Organic carbon stocks 	t/ha
-      #"soc/soc_0-5cm_mean")# Soil organic carbon content in the fine earth fraction 	dg/kg
+          "cec/cec_0-5cm_mean",   # Cation Exchange Capacity of the soil, 	mmol(c)/kg
+          "cfvo/cfvo_0-5cm_mean", # Volumetric fraction of coarse fragments (> 2 mm) 	cm3/dm3 (vol‰)
+          "silt/silt_0-5cm_mean", # Proportion of silt particles (≥ 0.002 mm and ≤ 0.05/0.063 mm) in the fine earth fraction 	g/kg
+          "clay/clay_0-5cm_mean", # Proportion of clay particles (< 0.002 mm) in the fine earth fraction 	g/kg
+          "sand/sand_0-5cm_mean", # Proportion of sand particles (> 0.05/0.063 mm) in the fine earth fraction 	g/kg
+          "nitrogen/nitrogen_0-5cm_mean", # Total nitrogen (N) 	cg/kg
+          "phh2o/phh2o_0-5cm_mean", # Soil pH 	pHx10
+          "ocd/ocd_0-5cm_mean",   # Organic carbon density 	hg/m³
+          "ocs/ocs_0-30cm_mean",  # Organic carbon stocks 	t/ha
+          "soc/soc_0-5cm_mean")   # Soil organic carbon content in the fine earth fraction 	dg/kg
       
       SoilGrids_variables <- sub(".*/", "", SoilGrids_variables_in)
       
@@ -602,6 +602,8 @@ FUN.DownEV <-
   }
 
 # GEOPHYSICAL DATA DOWNLOAD --------------------------------------------------
+#' define a function to load existing data or download them to
+#' the given directory. 
 FUN.DownGV <-
   function(Dir = getwd(),# where to store the data output on disk
            Force = FALSE,# do not overwrite already present data,
@@ -666,7 +668,7 @@ FUN.DownGV <-
       wind <- rast(paste0(Dir, "/wc2.1_2.5m_wind_max.tif"))
       names(wind) <- "mean_wind_speed_of_windiest_month"
       
-      ## resample ------
+      ## Resample ------
       ## if provided, resample to match another raster object's origin and resolution
       if (!missing(resample_to_match)) {
         message(paste0("resampling raster to match ", names(resample_to_match)))
@@ -686,13 +688,12 @@ FUN.DownGV <-
         wind <- terra::resample(wind,
                                 resample_to_match)
         message("wind successfully resampled")
-        
       }
       
       ### combine rasters
       geophysical_rasters <- c(dem, wind)
       
-      ### Saving ----
+      ## Saving ----
       message("saving as NetCDF")
       terra::writeCDF(geophysical_rasters,
                       filename = FNAME,
@@ -709,43 +710,127 @@ FUN.DownGV <-
 ##' (CIAT), available from http://srtm.csi.cgiar.org.
 #dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
 
-# DRAFT: Google Earth Engine downloads. -------------------------------------
-#' Almost working, but missing user/project credentials and login. 
-#' See https://developers.google.com/earth-engine/guides/auth
-#' ee.Authenticate()
-#' ee.Initialize(project='my-project')
-# 
-# install.packages("reticulate") # python environment - https://rstudio.github.io/reticulate/
-# install.packages("rgeedim") # search and download Google Earth Engine imagery with Python
-# 
-# library(reticulate)
-# 
-# virtualenv_create(envname = "uc_CWR", # saved under /Documents/.virtualenvs/uc_CWR
-#                   packages = c("numpy","geedim"),
-#                   python = "C:/Program Files/Python3.10/python.exe"
-# )
-# 
-# virtualenv_list()
-# 
-# use_virtualenv("uc_CWR")
-# 
-# library(rgeedim)
-# 
-# names(geedim()$enums)
-# 
-# 
-# ## Download CHILI: Continuous Heat-Insolation Load Index
-# ##' Theobald, D. M., Harrison-Atlas, D., Monahan, W. B., & Albano, C. M. 
-# ##' (2015). Ecologically-relevant maps of landforms and physiographic 
-# ##' diversity for climate adaptation planning. PloS one, 10(12), e0143619
-# 
-# chili_img_id <- gd_image_from_id('CSP/ERGo/1_0/Global/ALOS_CHILI')
-# 
-# chili <-  
-#   gd_download(chili_img_id,
-#     filename = 'chili.tif',
-#     resampling = "bilinear",
-#     scale = 2500, # scale=10: request ~10m resolution
-#     overwrite = TRUE,
-#     silent = FALSE
-#   )
+
+# WORLD DATABASE ON PROTECTED AREAS ---------------------------------------
+#' UNEP-WCMC and IUCN (2025), Protected Planet: 
+#' The World Database on Protected Areas (WDPA) [Online], February 2025, 
+#' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
+#' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
+FUN.DownWDPA <-  function(
+    wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
+    wdpa_destination = file.path(Dir.Capfitogen.WDPA,
+                                 "WDPA_Feb2025_Public_shp.zip"),
+    Force = FALSE) {
+  # set a path to wdpa shapefiles
+  wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
+  
+  # define the file name of global wdpa shapefile to be created
+  FNAME <- file.path(wdpa_path, "global_wdpa_polygons.shp")
+  
+  # check if the final wdpa file already exists and whether to overwrite
+  if (!Force & file.exists(FNAME)) {
+    message(paste0("A global wdpa file with polygons exists already: ", FNAME))
+  } else {
+    # download if Force = TRUE or the file isn't already there 
+    message("downloading zipped WDPA shapefiles, ca 4GB")
+    # set long timeout to avoid interrupting download
+    options(timeout = 1000)
+    # download the zipped files
+    download.file(url = wdpa_url,
+                  destfile = wdpa_destination,
+                  cacheOK = FALSE)
+    # unzip files
+    message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
+    unzip(zipfile = wdpa_destination,
+          exdir = Dir.Capfitogen.WDPA)
+    
+    # unzip split shapefile downloads
+    message("unzipping shapefiles split in download")
+    
+    shapefile_names <- c(
+      "WDPA_Feb2025_Public_shp-points.cpg",
+      "WDPA_Feb2025_Public_shp-points.dbf",
+      "WDPA_Feb2025_Public_shp-points.prj",
+      "WDPA_Feb2025_Public_shp-points.shp",
+      "WDPA_Feb2025_Public_shp-points.shx",
+      "WDPA_Feb2025_Public_shp-polygons.cpg",
+      "WDPA_Feb2025_Public_shp-polygons.dbf",
+      "WDPA_Feb2025_Public_shp-polygons.prj",
+      "WDPA_Feb2025_Public_shp-polygons.shp",
+      "WDPA_Feb2025_Public_shp-polygons.shx"
+    )
+    
+    shapefile_paths <- file.path(wdpa_path,
+                                 shapefile_names)
+    
+    # loop over zip directories with parts of the global data (numbered 0, 1, 2)
+    for (i in 0:2) {
+      # define name of the current directory to be unzipped
+      zipfilename <-
+        file.path(Dir.Capfitogen.WDPA,
+                  paste0("WDPA_Feb2025_Public_shp_", i, ".zip"))
+      
+      # unzip the directory containing shapefiles
+      unzip(zipfile = zipfilename,
+            exdir = wdpa_path)
+      message(paste0("unzipped ", zipfilename,
+                     "\nto ", wdpa_path))
+      
+      # rename shapefiles with numbers to prevent overwriting them
+      new_shapefile_names <- file.path(wdpa_path,
+                                       paste0(i, "_",
+                                              shapefile_names))
+      file.rename(from = shapefile_paths,
+                  to = new_shapefile_names)
+    }
+    
+    # delete unnecessary files
+    message("deleting redundant files (translations etc.)")
+    files_to_keep <- c(
+      wdpa_path,
+      wdpa_destination,
+      file.path(Dir.Capfitogen.WDPA,
+                "WDPA_sources_Feb2025.csv"))
+    
+    files_to_delete <-
+      list.files(Dir.Capfitogen.WDPA,
+                 full.names = TRUE)[list.files(Dir.Capfitogen.WDPA,
+                                               full.names = TRUE) %nin% files_to_keep]
+    file.remove(files_to_delete,
+                recursive = TRUE)
+    
+    # prepare list of shapefiles to be combined
+    wdpa_polygon_shapefiles <-
+      # list polygon shapefiles in WDPA directory
+      substr(unique(sub("\\..*", "",
+                        list.files(wdpa_path)[grep(pattern = "polygon",
+                                                   x = shapefile_names)])),
+             3, 34)
+    
+    shapefile_list <- list()
+    
+    for (i in 0:2) {
+      # read in all the polygon shapefile layers
+      layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
+      shapefile_list[[i + 1]] <-
+        read_sf(dsn = wdpa_path, layer = layer_name)
+    }
+    
+    # merge parts into one global shapefile
+    message("combining parts of the WDPA shapefile. This can take a while ---")
+    wdpa <- do.call(rbind, shapefile_list)
+    
+    # save complete wdpa
+    message("Complete WDPA successfully combined.")
+    st_write(wdpa,
+             FNAME)
+    #' ERROR +
+    #' Warning messages:
+    #'   1: In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  ... :
+    #'                         GDAL Message 1: One or several characters couldn't be converted correctly from UTF-8 to ISO-8859-1.  This warning will not be emitted anymore.
+    #' 2: In CPL_write_ogr(obj, dsn, layer, driver, as.character(dataset_options),  ... :
+    #'   GDAL Message 1: Value 555510160 of field WDPAID of feature 114424 not successfully written. Possibly due to too larger number with respect to field width
+    message("WDPA saved as global_wdpa_polygons.shp")
+  }
+}
+

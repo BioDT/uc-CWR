@@ -78,8 +78,7 @@ results/
 
 # Downloads
 R_scripts/ELCmapas.R
-capfitogen-main.zip
-Capfitogen-main/
+Capfitogen/*
 Data/Capfitogen/
 
 hq

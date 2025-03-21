@@ -18,6 +18,7 @@ package_vec <- c(
   'ggpubr', # t-test comparison in ggplot
   'gridExtra', # ggplot saving in PDF
   'ncdf4', # handling NetCDF files
+  'maps', # background maps
   'parallel', # parallel runs
   'pbapply', # parallel runs with estimator bar
   'raster', # spatial data ----------------------- should be replaced by terra
@@ -115,7 +116,7 @@ Dir.Exports <- file.path(Dir.Base, "Exports")
 Dir.Exports.ModGP <- file.path(Dir.Exports, "ModGP")
 Dir.Exports.Capfitogen <- file.path(Dir.Exports, "Capfitogen")
 Dir.R_scripts <- file.path(Dir.Base, "R_scripts")
-Dir.Capfitogen <- file.path(Dir.Base, "Capfitogen-main")
+Dir.Capfitogen <- file.path(Dir.Base, "Capfitogen")
 Dir.Capfitogen.WDPA <- file.path(Dir.Capfitogen, "wdpa")
 Dir.Capfitogen.ELCMap <- file.path(Dir.Capfitogen, "ELCmapas")
 Dir.Capfitogen.ELCMap.Error <- file.path(Dir.Capfitogen.ELCMap, "Error")

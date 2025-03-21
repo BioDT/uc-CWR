@@ -11,9 +11,10 @@
 #'    - 'Complementa'
 #'  - Visualisation of outputs
 #'  DEPENDENCIES:
+#'  - Capfitogen submodule (from https://github.com/evalieungh/Capfitogen)
 #'  - R_Scripts directory containing:
 #'  	- "MoDGP-commonlines.R"
-#'  	- "SHARED-APICredentials.R" -- NB! internal to project members, ask for access
+#'  	- "SHARED-APICredentials.R" -- NB! internal to project, ask for access
 #'  	- "SHARED-Data.R"
 #' AUTHORS: [Eva Lieungh, Erik Kusch, Heli Juottonen, Desalegn Chala]
 #' Capfitogen credit: Parra-Quijano et al. 2021, 
@@ -101,8 +102,10 @@ Species_ls <- FUN.DownGBIF(
 ##' 19 BioClim variables
 ##' FUN.DownBV uses KrigR to download ERA5 data from Climate Data Store (CDS)
 ##' is each file of each variable >20GB? 
-##' Will this download Global Multi-resolution Terrain Elevation Data (GMTED2010) as well?
-##' Temporal coverage: January 1950 to present ? https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
+##' Will this download Global Multi-resolution Terrain Elevation Data
+##' (GMTED2010) as well?
+##' Temporal coverage: January 1950 to present ? 
+##' https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
 message("Downloading new or loading existing 19 BioClim bioclimatic variables")
 
 # Check for existing BioClim data file
@@ -183,100 +186,20 @@ pasaporte_file_name = paste0(sub(pattern = " ",
                              ".txt")
 
 write.table(Species_ls[["occs"]],
-            file.path("Capfitogen-main/Pasaporte",
+            file.path("Capfitogen/Pasaporte",
                       pasaporte_file_name),
             sep = "\t",)
 
 ### Download protected areas ----
-#' NB! This download is large and combining big shapefiles requires 
-#' more computing power than should be done on a normal computer.
-#' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
-#' download shapefiles for protected areas to overlay with Complementa tool:
-#' UNEP-WCMC and IUCN (2025), Protected Planet: 
-#' The World Database on Protected Areas (WDPA) [Online], February 2025, 
-#' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
-wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip"
-wdpa_destination = file.path(Dir.Capfitogen.WDPA, 
-                             "WDPA_Feb2025_Public_shp.zip")
-# if the file isn't there already, download it
-if (!file.exists(wdpa_destination)) {
-  message("downloading zipped WDPA shapefiles, ca 4GB")
-  # set long timeout to avoid interrupting download
-  options(timeout = 1000)
-  # download the zipped files
-  download.file(url = wdpa_url,
-                destfile = wdpa_destination,
-                cacheOK = FALSE)
-  # unzip files
-  message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
-  unzip(zipfile = wdpa_destination,
-        exdir = Dir.Capfitogen.WDPA)
-  # unzip split shapefile downloads
-  message("unzipping shapefiles split in download")
-  wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
-  shapefile_names <- c(
-    "WDPA_Feb2025_Public_shp-points.cpg",
-    "WDPA_Feb2025_Public_shp-points.dbf",
-    "WDPA_Feb2025_Public_shp-points.prj",
-    "WDPA_Feb2025_Public_shp-points.shp",
-    "WDPA_Feb2025_Public_shp-points.shx",
-    "WDPA_Feb2025_Public_shp-polygons.cpg",
-    "WDPA_Feb2025_Public_shp-polygons.dbf",
-    "WDPA_Feb2025_Public_shp-polygons.prj",
-    "WDPA_Feb2025_Public_shp-polygons.shp",
-    "WDPA_Feb2025_Public_shp-polygons.shx")
-  shapefile_paths <- file.path(wdpa_path,
-                               shapefile_names)
-  for (i in 0:2) {
-    # define name of the current directory to be unzipped
-    zipfilename <- 
-      file.path(Dir.Data.Capfitogen,
-                paste0("WDPA_Feb2025_Public_shp_", i, ".zip"))
-    # unzip the directory containing shapefiles
-    unzip(zipfile = zipfilename,
-          exdir = wdpa_path)
-    # rename shapefiles with numbers to prevent overwriting them
-    new_shapefile_names <- file.path(wdpa_path,
-                                     paste0(i, "_",
-                                            shapefile_names))
-    file.rename(from = shapefile_paths,
-                to = new_shapefile_names)
-  }
-  
-  # delete unnecessary files
-  files_to_keep <- c(wdpa_path,
-                     wdpa_destination,
-                     file.path(Dir.Capfitogen.WDPA,
-                               "WDPA_sources_Feb2025.csv"))
-  files_to_delete <-
-    list.files(Dir.Capfitogen.WDPA,
-               full.names = TRUE)[list.files(Dir.Capfitogen.WDPA,
-                                             full.names = TRUE) %nin% files_to_keep]
-  file.remove(files_to_delete, 
-              recursive = TRUE)
-  
-  # merge parts into one global shapefile
-  wdpa_polygon_shapefiles <- 
-    # list polygon shapefiles in WDPA directory
-    substr(unique(sub("\\..*", "",
-                      list.files(wdpa_path)[grep(pattern = "polygon",
-                                                 x = all_wdpa_shapefiles)])),
-           3, 34)
-  shapefile_list <- list()
-  for (i in 0:2) {
-    # read in all the polygon shapefile layers
-    layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
-    shapefile_list[[i + 1]] <-
-      read_sf(dsn = wdpa_path, layer = layer_name)
-  }
-  message("combining parts of the WDPA shapefile. This can take a while ---")
-  wdpa <- do.call(rbind, shapefile_list)
-  
-  # save complete wdpa
-  message("Complete WDPA successfully combined. Saving it as global_wdpa_polygons.shp")
-  st_write(wdpa,
-           file.path(wdpa_path, "global_wdpa_polygons.shp"))
-}
+#' download shapefiles for protected areas to overlay with Complementa tool
+FUN.DownWDPA(
+  # download from url:
+  wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
+  # save the downloaded zipfile as:
+  wdpa_destination = file.path(Dir.Capfitogen.WDPA,
+                               "WDPA_Feb2025_Public_shp.zip"),
+  # do not overwrite existing data
+  Force = FALSE)
 
 ## Variable selection ---------------------------------------------------------
 # combine variables
@@ -306,20 +229,21 @@ predictors <- raster::stack(predictors)
 
 # save variables in CAPFITOGEN folder
 if (!dir.exists(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))) {
-  dir.create(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))
+  dir.create(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"),
+             recursive = TRUE)
   dir.create(file.path(Dir.Capfitogen, "rdatamaps/world/9x9"),
              recursive = TRUE)
 }
 
 saveRDS(predictors,
-        "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
+        "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
 save(predictors,
-     file = "Capfitogen-main/rdatapoints/world/9x9/base9x9.RData")
+     file = "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
 
 predictor_names <- names(predictors)
   
 for (i in 1:dim(predictors)[3]) {
-  file_name_path = file.path("Capfitogen-main/rdatamaps/world/9x9",
+  file_name_path = file.path("Capfitogen/rdatamaps/world/9x9",
                              paste0(names(predictors[[i]]),".tif"))
   writeRaster(predictors[[i]],
               file_name_path,
@@ -330,7 +254,7 @@ for (i in 1:dim(predictors)[3]) {
 ### Parameters for ELC maps ----
 {
 ruta <- Dir.Capfitogen # path to capfitogen scripts
-resultados <- Dir.Results.ELCMap # directory to place results
+resultados <- Dir.Capfitogen.ELCMap # directory to place results
 pasaporte <- pasaporte_file_name # species occurrence data
 
 pais <- "World" # global extent - big modifications will be necessary to use different extent
@@ -354,7 +278,7 @@ iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calcul
 # run the script
 message("Clustering and creating maps")
 source(file.path(Dir.Capfitogen, 
-                 "/scripts/Tools Herramientas/ELCmapas_BioDT.R"))
+                 "scripts/Tools Herramientas/ELCmapas.R"))
 setwd(Dir.Base)
 
 ### quick visualisation of ELC maps ----
@@ -438,7 +362,7 @@ message("running Capfitogen Complementa tool for conservation areas")
 setwd(Dir.Base)
 source(file.path(Dir.Capfitogen, 
                  "/scripts/Tools Herramientas/Complementa.R"))
-#' works if areas = FALSE !
+
 setwd(Dir.Base)
 
 ### quick visualisation ----
@@ -451,8 +375,6 @@ non_zero_mask <- mask(complementa_map,
                       !is.na(complementa_map))
 complementa_points <- as.points(non_zero_mask, na.rm = TRUE)
 plot(complementa_points)
-
-library(maps)
 
 map(
   'world',
