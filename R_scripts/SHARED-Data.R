@@ -641,7 +641,7 @@ FUN.DownGV <-
         unlink(temp)
       }
       dem <- rast(paste0(Dir, "/wc2.1_2.5m_elev.tif"))
-      names(dem) <- "elevation"
+      names(dem) <- "Elevacion"
       
       ## Download wind speed ------
       ##' WorldClim 2
@@ -725,20 +725,23 @@ FUN.DownWDPA <-  function(
   wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
   
   # define the file name of global wdpa shapefile to be created
-  FNAME <- file.path(wdpa_path, "global_wdpa_polygons.shp")
+  FNAME <- file.path(wdpa_path, "global_wdpa_polygons.gpkg")
   
   # check if the final wdpa file already exists and whether to overwrite
   if (!Force & file.exists(FNAME)) {
     message(paste0("A global wdpa file with polygons exists already: ", FNAME))
   } else {
-    # download if Force = TRUE or the file isn't already there 
-    message("downloading zipped WDPA shapefiles, ca 4GB")
-    # set long timeout to avoid interrupting download
-    options(timeout = 1000)
-    # download the zipped files
-    download.file(url = wdpa_url,
-                  destfile = wdpa_destination,
-                  cacheOK = FALSE)
+    if (!file.exists(wdpa_destination)) {
+      # download if Force = TRUE or the file isn't already there
+      message("downloading zipped WDPA shapefiles, ca 4GB")
+      # set long timeout to avoid interrupting download
+      options(timeout = 1000)
+      # download the zipped files
+      download.file(url = wdpa_url,
+                    destfile = wdpa_destination,
+                    cacheOK = FALSE)
+    }
+
     # unzip files
     message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
     unzip(zipfile = wdpa_destination,

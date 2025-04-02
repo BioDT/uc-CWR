@@ -82,6 +82,11 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 }
 
 # DATA ====================================================================
+message(paste("-----------------------------", 
+              " starting data download/load ",
+              "-----------------------------", 
+              sep = "\n"))
+
 ## Run SHARED-Data script -------------------------------------------------
 ## defines FUN.DownGBIF(), FUN.DownBV(), FUN.DownEV()
 source(file.path(Dir.R_scripts, "SHARED-Data.R"))
@@ -121,9 +126,6 @@ if (file.exists(existing_bioclim_file)) {
     Force = FALSE # do not overwrite already present data
   )
 }
-
-# or use an existing data set (from Erik?) for testing...
-# bioclim_variables <- terra::rast(file.path(Dir.Data.Envir, "BV_1985-2015.nc"))
 
 # make sure the BioClim data have the correct names
 BioClim_names <- c( 
@@ -168,7 +170,25 @@ geophysical_variables <- FUN.DownGV(
   resample_to_match = bioclim_variables[[1]]
 )
 
+## Protected areas database -----------------------------------------------
+#' download shapefiles for protected areas to overlay with Complementa tool.
+#' The FUN.DownWDPA function will save the file to a folder, but not load it 
+#' into RStudio as an object.
+FUN.DownWDPA(
+  # download from url:
+  wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
+  # save the downloaded zipfile as:
+  wdpa_destination = file.path(Dir.Capfitogen.WDPA,
+                               "WDPA_Feb2025_Public_shp.zip"),
+  # do not overwrite existing data
+  Force = FALSE)
+
 # CAPFITOGEN pipeline =========================================================
+message(paste("------------------------------", 
+              " starting Capfitogen pipeline ",
+              "------------------------------", 
+              sep = "\n"))
+
 ### Format GBIF data ----
 # need a data frame named 'puntos' = points with occurrence points
 puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
@@ -176,6 +196,7 @@ puntos <- data.frame(POINTID = 1:length(Species_ls[["occs"]][["DECLATITUDE"]]),
                      POINT_Y = Species_ls[["occs"]][["DECLATITUDE"]])
 
 ### create 'pasaporte' ----
+message("create Pasaporte file")
 #' Capfitogen uses a file named "pasaporte" with species/taxa occurrences. 
 #' The file uses Darwincore names, so it should be OK to use the occurrences 
 #' from the GBIF download directly. 
@@ -190,20 +211,8 @@ write.table(Species_ls[["occs"]],
                       pasaporte_file_name),
             sep = "\t",)
 
-### Download protected areas ----
-#' download shapefiles for protected areas to overlay with Complementa tool.
-#' The FUN.DownWDPA function will save the file to a folder, but not load it 
-#' into RStudio as an object.
-FUN.DownWDPA(
-  # download from url:
-  wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
-  # save the downloaded zipfile as:
-  wdpa_destination = file.path(Dir.Capfitogen.WDPA,
-                               "WDPA_Feb2025_Public_shp.zip"),
-  # do not overwrite existing data
-  Force = FALSE)
-
 ## Variable selection ---------------------------------------------------------
+message("running variable selection")
 # combine variables
 all_predictors <- c(bioclim_variables, 
                     #edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
@@ -229,6 +238,17 @@ print(variables_to_keep)
 predictors <- all_predictors[[(variables_to_keep)]]
 predictors <- raster::stack(predictors)
 
+# get bioclimatic variable names that matches Capfitogen's format
+predictor_names <- names(predictors)
+bioclim_predictor_names <- predictor_names[grep("BIO", predictor_names)]
+bioclim_predictor_codes <- sub("_.*", "", tolower(bioclim_predictor_names))
+bioclim_predictor_codes <- sub("o", "o_", bioclim_predictor_codes)
+capfitogen_bioclim_names <- read.delim("Capfitogen/bioclim.txt", 
+                                       fileEncoding = "latin1")
+bioclim_subset <-
+  capfitogen_bioclim_names[capfitogen_bioclim_names$VARCODE %in% bioclim_predictor_codes, ]
+bioclim_predictor_names_capfitogen <- bioclim_subset$VARDESCR
+
 # save variables in CAPFITOGEN folder
 if (!dir.exists(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))) {
   dir.create(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"),
@@ -242,40 +262,112 @@ saveRDS(predictors,
 save(predictors,
      file = "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
 
-predictor_names <- names(predictors)
-  
+# names(predictors[[1:length(bioclim_predictor_names)]]) <- bioclim_predictor_codes
+predictor_names_for_saving <-
+  c(bioclim_predictor_codes,
+    predictor_names[grep("BIO", predictor_names, invert = TRUE)]
+    )
+
 for (i in 1:dim(predictors)[3]) {
   file_name_path = file.path("Capfitogen/rdatamaps/world/9x9",
-                             paste0(names(predictors[[i]]),".tif"))
+                             paste0(predictor_names_for_saving[i],".tif"))
   writeRaster(predictors[[i]],
               file_name_path,
               overwrite = TRUE)
 }
 
+## Modify Capfitogen possible values ------------------------------------------
+
+# add a line with our data resolution to list of possible values
+load(file.path(Dir.Capfitogen, "resol.RData"))
+if (nrow(resol[resol$resol == "9x9",]) < 1) {
+  line = paste("\"celdas 9x9 km aprox (4.5 arc-min)\"",	"\"9x9\"",	0.075,
+               sep = "\t")
+  write(line,
+        file = file.path(Dir.Capfitogen, "resol.txt"),
+        append = TRUE)
+  
+  resol <- rbind(
+    resol,
+    data.frame(
+      resolucion = "celdas 9x9 km aprox (4.5 arc-min)",
+      resol = "9x9",
+      resoldec = 0.075
+    )
+  )
+  save(resol, file = file.path(Dir.Capfitogen, "resol.RData"))
+}
+rm(resol)
+
+# create template file for logging script processes
+if (!file.exists(file.path(Dir.Capfitogen.Error,"process_info.txt"))) {
+  file.create(file.path(Dir.Capfitogen.Error,"process_info.txt"))
+}
+
+# add geophysical variables to list of possible variables
+load(file.path(Dir.Capfitogen, "geophys.RData"))
+if (nrow(geophys[geophys$VARCODE == "wind_max", ]) < 1) {
+  geophys <- rbind(
+    geophys,
+    data.frame(
+      VARID = 145,
+      VARCODE = "wind_max",
+      VARDESCR_EN = "mean wind speed of windiest month (annual max of monthly means)",
+      VARDESCR = "mean_wind_speed_of_windiest_month",
+      VARUNIDAD = "ms-1",
+      VARFUENTE = "Derivada de Worldclim",
+      VARMODULO = "Geofisico/Geophysic",
+      FUENTELINK = "http://worldclim.org"
+    )
+  )
+  save(geophys, file = file.path(Dir.Capfitogen, "geophys.RData"))
+  
+  # rename geophysical variable files ---- NB! will break when edaphic vars are added...
+  number_of_geophys_variables <- length(predictor_names[grep("BIO",
+                                                             predictor_names,
+                                                             invert = TRUE)])
+  for (i in 1:number_of_geophys_variables) {
+    from_name = predictor_names[grep("BIO",
+                                     predictor_names,
+                                     invert = TRUE)][i]
+    
+    to_name = geophys[geophys$VARDESCR == from_name, "VARCODE"][1]
+    file.rename(
+      from = file.path(
+        "Capfitogen/rdatamaps/world/9x9",
+        paste0(from_name, ".tif")
+      ),
+      to = file.path("Capfitogen/rdatamaps/world/9x9",
+                     paste0(to_name, ".tif"))
+    )
+  }
+}
+
+rm(geophys)
+
 ## Clustering and map creation: ELCmapas ---------------------------------------
+message("setting parameters and running ELC map script (ecogeographic land characterization)")
 ### Parameters for ELC maps ----
-{
 ruta <- Dir.Capfitogen # path to capfitogen scripts
 resultados <- Dir.Capfitogen.ELCMap # directory to place results
 pasaporte <- pasaporte_file_name # species occurrence data
 
-pais <- "World" # global extent - big modifications will be necessary to use different extent
+pais <- "world" # global extent - big modifications will be necessary to use different extent
 geoqual <- FALSE
 totalqual<-30 # Only applies if GEOQUAL=TRUE, must be a value between 0 and 100
 duplicat <- TRUE # duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
 distdup <- 1 # distance threshold in km to remove duplicates from same population
-resol1 <- "9x9" # resolution, change to 9x9
+resol1 <- "celdas 9x9 km aprox (4.5 arc-min)" # resolution
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
 
-bioclimv <- predictor_names[grep("BIO", predictor_names)] #
+bioclimv <- bioclim_predictor_names_capfitogen #
 edaphv <- names(geophysical_variables)#names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
 geophysv <- names(geophysical_variables) # geophysical variables
 
 maxg <- 20 # maximum number of clusters per component 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic
 iterat <- 10 # if metodo="Calinski" or "ssi", the number of iterations to calculate the optimal number of clusters.
-}
 
 # run the script
 message("Clustering and creating maps")
@@ -316,7 +408,7 @@ datanatax <- FALSE # whether the NA values in genus, species or subtaxa will be 
 mapaelcf <- TRUE # Note: Will an ELC map from a previous execution of the ELCmapas tool be used as an additional factor for classifying the taxonomic ranks for the complementarity analysis?
 mapaelc <- "mapa_elc_world.grd" #Only applies if mapaelcf=TRUE, mapaelc must contain the name of the ELC map obtained by previously using the ELCmapas tool (.grd and .gri files that must always be in the CAPFITOGEN3/ELCmapas folder)
 datanaelc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in NA zones on the ELC map will be taken into account or not (FALSE)
-data0elc <- FALSE #Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
+data0elc <- FALSE # Only applies if mapaelcf=TRUE, indicates whether (TRUE) the records that fall in category 0 on the ELC map will be taken into account or not (FALSE)
 }
 
 # run the script
@@ -327,3 +419,6 @@ source(file.path(Dir.Capfitogen,
 
 setwd(Dir.Base)
 
+message(" - - - end of capfitogen script - - - ")
+
+# end
