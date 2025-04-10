@@ -82,9 +82,9 @@ source(file.path(Dir.Scripts, "ModGP-commonlines.R"))
 }
 
 # DATA ====================================================================
-message(paste("-----------------------------", 
-              " starting data download/load ",
-              "-----------------------------", 
+message(paste("------------------------------", 
+              " starting data download/load  ",
+              "------------------------------", 
               sep = "\n"))
 
 ## Run SHARED-Data script -------------------------------------------------
@@ -150,6 +150,14 @@ BioClim_names <- c(
   "BIO18_Precipitation_of_Warmest_Quarter",
   "BIO19_Precipitation_of_Coldest_Quarter")
 names(bioclim_variables) <- BioClim_names
+
+### CAPFITOGEN data ------
+# download the default data from CAPFITOGEN.
+FUN.DownCAPFITOGEN(
+  Dir = Dir.Data.Envir,
+  Force = FALSE,
+  resample_to_match = bioclim_variables[[1]]
+)
 
 ### Edaphic data ------ 
 ## NB! each file at 250x250m is ~20GB...
@@ -292,9 +300,8 @@ if (nrow(resol[resol$resol == "9x9",]) < 1) {
     data.frame(
       resolucion = "celdas 9x9 km aprox (4.5 arc-min)",
       resol = "9x9",
-      resoldec = 0.075
-    )
-  )
+      resoldec = 0.075))
+  
   save(resol, file = file.path(Dir.Capfitogen, "resol.RData"))
 }
 rm(resol)
@@ -335,8 +342,7 @@ if (nrow(geophys[geophys$VARCODE == "wind_max", ]) < 1) {
     file.rename(
       from = file.path(
         "Capfitogen/rdatamaps/world/9x9",
-        paste0(from_name, ".tif")
-      ),
+        paste0(from_name, ".tif")),
       to = file.path("Capfitogen/rdatamaps/world/9x9",
                      paste0(to_name, ".tif"))
     )

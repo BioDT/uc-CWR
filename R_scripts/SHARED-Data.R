@@ -445,8 +445,97 @@ FUN.DownBV <- function(
   BV_ras
 }
 
+
+# CAPFITOGEN DATA DOWNLOAD ----------------------------------------------------
+# Download the standard data from CAPFITOGEN for the globe.
+FUN.DownCAPFITOGEN <- 
+  function(Dir = getwd(),
+           Force = FALSE,
+           resample_to_match = FALSE) {
+    
+    # define a file name
+    FNAME <- file.path(Dir, "capfitogen.nc")
+    
+    # check if file already exists and whether to overwrite
+    if (!Force & file.exists(FNAME)) {
+      capfitogen_rasters <- rast(FNAME)
+      message(
+        paste(FNAME, "exists already. It has been loaded from the disk. 
+         If you wish to override the present data, please specify Force = TRUE")
+        )
+      return(capfitogen_rasters)
+    }
+    
+    # if Force=TRUE or the file doesn't already exist:
+    if (Force | !file.exists(FNAME)) {
+      ## download data from Capfitogen Google drive ----
+      message("Start downloading 10x10 data from Capfitogen google drive:")
+      googledrive_data_files <- read.csv(
+        file.path(Dir.Data.Capfitogen, "capfitogen_world_data_googledrive_links.csv"))
+      
+      dir.create(path = paste0(Dir, "/capfitogen"),
+                 showWarnings = FALSE)
+      
+      for (i in 1:nrow(googledrive_data_files)) {
+        capfitogen_data_url = paste0(
+          "https://drive.google.com/uc?export=download&id=",
+          googledrive_data_files$id[i])
+        file_name = googledrive_data_files$name[i]
+        download.file(url = capfitogen_data_url, 
+                      destfile = paste0(Dir, "/capfitogen/",
+                                        googledrive_data_files$name[i]))
+      }
+      
+      # list the downloaded files
+      file_list <- list.files(paste0(Dir.Data.Envir,
+                                     "/capfitogen"))
+      # read in as a list of rasters
+      rasters <- list()
+      for (i in 1:length(file_list)) {
+        file_path_i <- file.path(Dir.Data.Envir,"capfitogen",
+                               file_list[i])
+        rasters[[i]] <- rast(file_path_i)
+      }
+      # rename rasters
+      names(rasters) <- googledrive_data_files$name
+      
+      ### resample ----
+      ## if provided, resample to match another raster object's origin and resolution
+      if (!missing(resample_to_match)) {
+        message(paste0("resampling raster to match ", names(resample_to_match)))
+        resample_to_match <- rast(resample_to_match)
+        
+        ## project downloaded rasters to match resample_to_match file
+        projection_to_match <- terra::crs(resample_to_match)
+        
+        for (i in 1:length(rasters)) {
+          terra::crs(rasters[[i]]) <- projection_to_match
+        }
+        
+        ## resample
+        # Error: [resample] warp failure
+        # In addition: Warning messages:
+        #   1: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif:Using code not yet in table (GDAL error 1) 
+        # 2: TIFFReadEncodedStrip() failed. (GDAL error 1) 
+        # 3: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif, band 1: IReadBlock failed at X offset 0, Y offset 0: TIFFReadEncodedStrip() failed. (GDAL error 1)
+        for (i in 1:length(rasters)) {
+          rasters[[i]] <- terra::resample(rasters[[i]],
+                                          resample_to_match)
+        }
+        
+      # combine the individual rasters into a NetCDF file
+      message(paste0("saving as netCDF:", FNAME))
+      terra::writeCDF(rasters,
+                      filename = FNAME,
+                      overwrite = FALSE)
+      rasters
+      
+    }
+  }
+
 # EDAPHIC DATA DOWNLOAD -------------------------------------------------------
-# INCOMPLETE! Works for some variables, but the data set is incomplete.
+# NB! Works for some variables, but the data set is incomplete. 
+# This function should be modified to add or replace data for capfitogen.
 FUN.DownEV <-
   function(Dir = getwd(), # where to store the data output on disk
            target_resolution = c(250, 250),
