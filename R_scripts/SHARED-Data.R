@@ -448,88 +448,95 @@ FUN.DownBV <- function(
 
 # CAPFITOGEN DATA DOWNLOAD ----------------------------------------------------
 # Download the standard data from CAPFITOGEN for the globe.
-FUN.DownCAPFITOGEN <- 
+FUN.DownCAPFITOGEN <-
   function(Dir = getwd(),
            Force = FALSE,
            resample_to_match = FALSE) {
-    
     # define a file name
-    FNAME <- file.path(Dir, "capfitogen.nc")
+    FNAME <- file.path("Data/Environment/capfitogen.nc")
     
     # check if file already exists and whether to overwrite
     if (!Force & file.exists(FNAME)) {
       capfitogen_rasters <- rast(FNAME)
       message(
-        paste(FNAME, "exists already. It has been loaded from the disk. 
-         If you wish to override the present data, please specify Force = TRUE")
+        paste(
+          FNAME,
+          "exists already. It has been loaded from the disk.
+         If you wish to override the present data, please specify Force = TRUE"
         )
+      )
       return(capfitogen_rasters)
     }
     
     # if Force=TRUE or the file doesn't already exist:
     if (Force | !file.exists(FNAME)) {
       ## download data from Capfitogen Google drive ----
-      message("Start downloading 10x10 data from Capfitogen google drive:")
+      message("Start downloading 10x10 data from Capfitogen google drive.")
       googledrive_data_files <- read.csv(
-        file.path(Dir.Data.Capfitogen, "capfitogen_world_data_googledrive_links.csv"))
+        file.path(
+          Dir.Data.Capfitogen,
+          "capfitogen_world_data_googledrive_links.csv"
+        )
+      )
+      
+      if (!missing(resample_to_match)) {
+        message(paste0("Resampling rasters to match ", names(resample_to_match)))
+      }
       
       dir.create(path = paste0(Dir, "/capfitogen"),
                  showWarnings = FALSE)
-      
+      # download each file separately by google id
       for (i in 1:nrow(googledrive_data_files)) {
         capfitogen_data_url = paste0(
           "https://drive.google.com/uc?export=download&id=",
-          googledrive_data_files$id[i])
+          googledrive_data_files$id[i]
+        )
         file_name = googledrive_data_files$name[i]
-        download.file(url = capfitogen_data_url, 
-                      destfile = paste0(Dir, "/capfitogen/",
-                                        googledrive_data_files$name[i]))
+        download.file(
+          url = capfitogen_data_url,
+          destfile = paste0(Dir, "/capfitogen/", googledrive_data_files$name[i])
+        )
       }
       
       # list the downloaded files
-      file_list <- list.files(paste0(Dir.Data.Envir,
-                                     "/capfitogen"))
-      # read in as a list of rasters
-      rasters <- list()
+      file_list <- list.files(paste0(Dir.Data.Envir, "/capfitogen"))
+      
+      # read in and format rasters one by one from file name
+      rasters <- NULL
       for (i in 1:length(file_list)) {
-        file_path_i <- file.path(Dir.Data.Envir,"capfitogen",
-                               file_list[i])
-        rasters[[i]] <- rast(file_path_i)
+        file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
+        raster_i <- rast(file_path_i)
+        # rename raster
+        names(raster_i) <- googledrive_data_files$name[i]
+        
+        # resample
+        # if provided, resample to match another raster object's origin and resolution
+        if (!missing(resample_to_match)) {
+          resample_to_match <- rast(resample_to_match)
+          
+          ## project downloaded rasters to match resample_to_match file
+          projection_to_match <- terra::crs(resample_to_match)
+          
+          terra::crs(raster_i) <- projection_to_match
+          
+          raster_i <- terra::resample(raster_i, resample_to_match)
+          
+        }
       }
-      # rename rasters
-      names(rasters) <- googledrive_data_files$name
       
-      ### resample ----
-      ## if provided, resample to match another raster object's origin and resolution
-      if (!missing(resample_to_match)) {
-        message(paste0("resampling raster to match ", names(resample_to_match)))
-        resample_to_match <- rast(resample_to_match)
-        
-        ## project downloaded rasters to match resample_to_match file
-        projection_to_match <- terra::crs(resample_to_match)
-        
-        for (i in 1:length(rasters)) {
-          terra::crs(rasters[[i]]) <- projection_to_match
-        }
-        
-        ## resample
-        # Error: [resample] warp failure
-        # In addition: Warning messages:
-        #   1: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif:Using code not yet in table (GDAL error 1) 
-        # 2: TIFFReadEncodedStrip() failed. (GDAL error 1) 
-        # 3: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif, band 1: IReadBlock failed at X offset 0, Y offset 0: TIFFReadEncodedStrip() failed. (GDAL error 1)
-        for (i in 1:length(rasters)) {
-          rasters[[i]] <- terra::resample(rasters[[i]],
-                                          resample_to_match)
-        }
-        
-      # combine the individual rasters into a NetCDF file
+      ## resample
+      # Error: [resample] warp failure
+      # In addition: Warning messages:
+      #   1: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif:Using code not yet in table (GDAL error 1)
+      # 2: TIFFReadEncodedStrip() failed. (GDAL error 1)
+      # 3: C:/Users/evaler/OneDrive - Universitetet i Oslo/Eva/Artikler/_BioDT-CWR-capfitogen/base/uc-CWR/Data/Environment/capfitogen/prec_1.tif, band 1: IReadBlock failed at X offset 0, Y offset 0: TIFFReadEncodedStrip() failed. (GDAL error 1)
+      
+      rasters <- c(rasters, raster_i)
+      
+      # save rasters as a NetCDF file
       message(paste0("saving as netCDF:", FNAME))
-      terra::writeCDF(rasters,
-                      filename = FNAME,
-                      overwrite = FALSE)
+      terra::writeCDF(rasters, filename = FNAME, overwrite = FALSE)
       rasters
-      
     }
   }
 
@@ -805,11 +812,9 @@ FUN.DownGV <-
 #' The World Database on Protected Areas (WDPA) [Online], February 2025, 
 #' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
 #' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
-FUN.DownWDPA <-  function(
-    wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
-    wdpa_destination = file.path(Dir.Capfitogen.WDPA,
-                                 "WDPA_Feb2025_Public_shp.zip"),
-    Force = FALSE) {
+FUN.DownWDPA <-  function(wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
+                          wdpa_destination = file.path(Dir.Capfitogen.WDPA, "WDPA_Feb2025_Public_shp.zip"),
+                          Force = FALSE) {
   # set a path to wdpa shapefiles
   wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
   
@@ -830,11 +835,10 @@ FUN.DownWDPA <-  function(
                     destfile = wdpa_destination,
                     cacheOK = FALSE)
     }
-
+    
     # unzip files
     message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
-    unzip(zipfile = wdpa_destination,
-          exdir = Dir.Capfitogen.WDPA)
+    unzip(zipfile = wdpa_destination, exdir = Dir.Capfitogen.WDPA)
     
     # unzip split shapefile downloads
     message("unzipping shapefiles split in download")
@@ -852,8 +856,7 @@ FUN.DownWDPA <-  function(
       "WDPA_Feb2025_Public_shp-polygons.shx"
     )
     
-    shapefile_paths <- file.path(wdpa_path,
-                                 shapefile_names)
+    shapefile_paths <- file.path(wdpa_path, shapefile_names)
     
     # loop over zip directories with parts of the global data (numbered 0, 1, 2)
     for (i in 0:2) {
@@ -863,17 +866,12 @@ FUN.DownWDPA <-  function(
                   paste0("WDPA_Feb2025_Public_shp_", i, ".zip"))
       
       # unzip the directory containing shapefiles
-      unzip(zipfile = zipfilename,
-            exdir = wdpa_path)
-      message(paste0("unzipped ", zipfilename,
-                     "\nto ", wdpa_path))
+      unzip(zipfile = zipfilename, exdir = wdpa_path)
+      message(paste0("unzipped ", zipfilename, "\nto ", wdpa_path))
       
       # rename shapefiles with numbers to prevent overwriting them
-      new_shapefile_names <- file.path(wdpa_path,
-                                       paste0(i, "_",
-                                              shapefile_names))
-      file.rename(from = shapefile_paths,
-                  to = new_shapefile_names)
+      new_shapefile_names <- file.path(wdpa_path, paste0(i, "_", shapefile_names))
+      file.rename(from = shapefile_paths, to = new_shapefile_names)
     }
     
     # delete unnecessary files
@@ -881,23 +879,17 @@ FUN.DownWDPA <-  function(
     files_to_keep <- c(
       wdpa_path,
       wdpa_destination,
-      file.path(Dir.Capfitogen.WDPA,
-                "WDPA_sources_Feb2025.csv"))
+      file.path(Dir.Capfitogen.WDPA, "WDPA_sources_Feb2025.csv")
+    )
     
     files_to_delete <-
-      list.files(Dir.Capfitogen.WDPA,
-                 full.names = TRUE)[list.files(Dir.Capfitogen.WDPA,
-                                               full.names = TRUE) %nin% files_to_keep]
-    file.remove(files_to_delete,
-                recursive = TRUE)
+      list.files(Dir.Capfitogen.WDPA, full.names = TRUE)[list.files(Dir.Capfitogen.WDPA, full.names = TRUE) %nin% files_to_keep]
+    file.remove(files_to_delete, recursive = TRUE)
     
     # prepare list of shapefiles to be combined
     wdpa_polygon_shapefiles <-
       # list polygon shapefiles in WDPA directory
-      substr(unique(sub("\\..*", "",
-                        list.files(wdpa_path)[grep(pattern = "polygon",
-                                                   x = shapefile_names)])),
-             3, 34)
+      substr(unique(sub("\\..*", "", list.files(wdpa_path)[grep(pattern = "polygon", x = shapefile_names)])), 3, 34)
     
     shapefile_list <- list()
     
@@ -915,12 +907,14 @@ FUN.DownWDPA <-  function(
     
     # wdpa$WDPAID <- as.character(wdpa$WDPAID)
     # wdpa$text_field <- iconv(wdpa$text_field, to = "ASCII//TRANSLIT")
-
+    
     # save complete wdpa
     message("save as GeoPackage")
     st_write(wdpa, file.path(wdpa_path, "global_wdpa_polygons.gpkg"))
-    message(paste0("global WDPA saved as: ", 
-                   file.path(wdpa_path, "global_wdpa_polygons.gpkg")))
+    message(paste0(
+      "global WDPA saved as: ",
+      file.path(wdpa_path, "global_wdpa_polygons.gpkg")
+    ))
     
     message("save as shapefile")
     #st_write(wdpa, FNAME)
