@@ -59,6 +59,7 @@ rsconnect/
 *.zip
 !Data/*/GlobalAreaCRS.RData
 Data/Environment/soil/
+!**/capfitogen_world_data_googledrive_links.csv
 
 Logo/*
 
@@ -77,8 +78,6 @@ results/ELCmap/
 results/
 
 # Downloads
-R_scripts/ELCmapas.R
 Capfitogen/*
-Data/Capfitogen/
 
 hq
