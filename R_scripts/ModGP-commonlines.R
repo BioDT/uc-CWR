@@ -1,3 +1,7 @@
+#'###########################################################################
+#' 
+
+
 ## Default flags for runtime environment
 RUNNING_ON_LUMI <- FALSE
 RUNNING_ON_DESTINE <- FALSE
@@ -35,6 +39,7 @@ package_vec <- c(
   'viridis', # colour palette
   'bit64',
   'iterators',
+  'rvest', # to scrape google drive html
   'gdalUtilities', # to download from SoilGrids (FUN.DownEV)
   
   # # Capfitogen SelectVar packages 

@@ -291,3 +291,53 @@ FUN.DownGV <-
 ##' (CIAT), available from http://srtm.csi.cgiar.org.
 #dem <- rast("https://srtm.csi.cgiar.org/wp-content/uploads/files/250m/tiles250m.jpg")
 
+
+# Bioclim data from ModGP, cut out from capfitogen_master.R -------------------
+### Bioclomatic data ------
+##' 19 BioClim variables
+##' FUN.DownBV uses KrigR to download ERA5 data from Climate Data Store (CDS)
+##' is each file of each variable >20GB?
+##' Will this download Global Multi-resolution Terrain Elevation Data
+##' (GMTED2010) as well?
+##' Temporal coverage: January 1950 to present ?
+##' https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
+message("Downloading new or loading existing 19 BioClim bioclimatic variables")
+
+# Check for existing BioClim data file
+existing_bioclim_file <- file.path(Dir.Data.Envir, "BV_1985-2015.nc")
+if (file.exists(existing_bioclim_file)) {
+  message("Using existing BioClim data")
+  bioclim_variables <- terra::rast(existing_bioclim_file)
+} else {
+  bioclim_variables <- FUN.DownBV(
+    T_Start = 1999, # what year to begin climatology calculation?
+    T_End = 1999, # what year to end climatology calculation?
+    Dir = Dir.Data.Envir, # where to store the data output on disk
+    Force = FALSE # do not overwrite already present data
+  )
+}
+
+# make sure the BioClim data have the correct names
+BioClim_names <- c(
+  # see https://www.worldclim.org/data/bioclim.html
+  "BIO1_Annual_Mean_Temperature",
+  "BIO2_Mean_Diurnal_Range",
+  "BIO3_Isothermality",
+  "BIO4_Temperature_Seasonality",
+  "BIO5_Max_Temperature_of_Warmest_Month",
+  "BIO6_Min_Temperature_of_Coldest_Month",
+  "BIO7_Temperature_Annual_Range",
+  "BIO8_Mean_Temperature_of_Wettest_Quarter",
+  "BIO9_Mean_Temperature_of_Driest_Quarter",
+  "BIO10_Mean_Temperature_of_Warmest_Quarter",
+  "BIO11_Mean_Temperature_of_Coldest_Quarter",
+  "BIO12_Annual_Precipitation",
+  "BIO13_Precipitation_of_Wettest_Month",
+  "BIO14_Precipitation_of_Driest_Month",
+  "BIO15_Precipitation_Seasonality",
+  "BIO16_Precipitation_of_Wettest_Quarter",
+  "BIO17_Precipitation_of_Driest_Quarter",
+  "BIO18_Precipitation_of_Warmest_Quarter",
+  "BIO19_Precipitation_of_Coldest_Quarter")
+names(bioclim_variables) <- BioClim_names
+

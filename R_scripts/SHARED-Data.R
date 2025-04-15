@@ -451,7 +451,7 @@ FUN.DownBV <- function(
 FUN.DownCAPFITOGEN <-
   function(Dir = getwd(),
            Force = FALSE,
-           resample_to_match = FALSE) {
+           resample_to_match = NULL) {
     # define a file name
     FNAME <- file.path("Data/Environment/capfitogen.nc")
     
@@ -472,42 +472,50 @@ FUN.DownCAPFITOGEN <-
     if (Force | !file.exists(FNAME)) {
       ## download data from Capfitogen Google drive ----
       message("Start downloading 10x10 data from Capfitogen google drive.")
-      googledrive_data_files <- read.csv(
-        file.path(
-          Dir.Data.Capfitogen,
-          "capfitogen_world_data_googledrive_links.csv"
-        )
-      )
       
-      # message("installing gdown with pip install")
-      # system("pip install gdown")
+      # scrape Capfitogen's google drive to get direct download links (rdatamaps/world/10x10)
+      folder_id <- "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u"
+      embedded_url <- paste0("https://drive.google.com/embeddedfolderview?id=", 
+                             folder_id, "#list")
       
+      # Scrape the page
+      page <- read_html(embedded_url)
+      
+      # Extract <a> tags (these contain filenames + links)
+      file_links <- page %>% html_nodes("a") %>% html_attr("href")
+      file_names <- page %>% html_nodes("a") %>% html_text()
+      
+      tif_files <- data.frame(name = file_names, link = file_links)
+      
+      # Extract file ID from link
+      tif_files$file_id <- substr(tif_files$link, 
+                                  start = 33, stop = 65)
+      tif_files$download_url <- paste0("https://drive.google.com/uc?export=download&id=", tif_files$file_id)
+      
+      message("installing gdown with pip install")
+      system("pip install gdown")
+      
+      # create directory to store tiff files
       dir.create(path = paste0(Dir, "/capfitogen"),
                  showWarnings = FALSE)
       
-      # download each file separately by google id
-      for (i in 1:nrow(googledrive_data_files)) {
-        capfitogen_data_url = paste0(
-          "https://drive.google.com/uc?export=download&id=",
-          googledrive_data_files$id[i]
-        )
-        
-        file_name = googledrive_data_files$name[i]
-        
-        message(file_name)
-        cmd <- paste0("gdown ", capfitogen_data_url)
-        #cmd <- sprintf("gdown https://drive.google.com/uc?id=%s", id)
-        system(cmd)
-        # 
-        # download.file(
-        #   url = capfitogen_data_url,
-        #   destfile = paste0(Dir, "/capfitogen/", googledrive_data_files$name[i])
-        # )
-      }
-      # file_ids <- readLines("file_ids.txt")
+      # set long timeout to aoid interrupting downloads
+      options(timeout = 1000)
       
+      # download each file separately by google id
+      for (i in 1:nrow(tif_files)) {
+        file_name = tif_files$name[i]
+        message(file_name)
+        download.file(
+          url = tif_files$download_url[i],
+          destfile = paste0(Dir, "/capfitogen/", tif_files$name[i])
+        )
+      }
+
       # list the downloaded files
       file_list <- list.files(paste0(Dir.Data.Envir, "/capfitogen"))
+      message("downloaded files:")
+      print(file_list)
       
       # read in and format rasters one by one from file name
       rasters <- NULL
@@ -516,12 +524,13 @@ FUN.DownCAPFITOGEN <-
         raster_i <- rast(file_path_i)
         # rename raster
         names(raster_i) <- googledrive_data_files$name[i]
+        message(names(raster_i))
         
         # resample
         # if provided, resample to match another raster object's origin and resolution
-        if (resample_to_match == FALSE) {
-          message("No resampling")
-        } else {
+        if (is.null(resample_to_match)) {
+          message("No resampling.")
+        } else if (inherits(resample_to_match, "SpatRaster")) {
           message(paste0("Resampling rasters to match ", names(resample_to_match)))
           
           resample_to_match <- rast(resample_to_match)
@@ -532,11 +541,16 @@ FUN.DownCAPFITOGEN <-
           terra::crs(raster_i) <- projection_to_match
           
           raster_i <- terra::resample(raster_i, resample_to_match)
+        } else {
+          stop("Invalid input for resample_to_match. Must be a SpatRaster or NULL.")
         }
+      
+        message(paste("adding raster", names(raster_i)))
+        rasters <- c(rasters, raster_i)
       }
       
-      message(paste("adding raster", names(raster_i)))
-      rasters <- c(rasters, raster_i)
+      typeof(rasters)
+      str(rasters)      
       
       # save rasters as a NetCDF file
       message(paste0("saving as netCDF:", FNAME))
@@ -547,122 +561,153 @@ FUN.DownCAPFITOGEN <-
 
 # WORLD DATABASE ON PROTECTED AREAS ---------------------------------------
 #' UNEP-WCMC and IUCN (2025), Protected Planet: 
-#' The World Database on Protected Areas (WDPA) [Online], February 2025, 
+#' The World Database on Protected Areas (WDPA) [Online], 
 #' Cambridge, UK: UNEP-WCMC and IUCN. Available at: www.protectedplanet.net.
-#' https://www.protectedplanet.net/en/thematic-areas/wdpa&ved=2ahUKEwjA4fPhltyLAxVkJBAIHfdOEasQFnoECBUQAQ&usg=AOvVaw0eVrEFsb0_TP4UIl2am3Za
-FUN.DownWDPA <-  function(wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
-                          wdpa_destination = file.path(Dir.Capfitogen.WDPA, "WDPA_Feb2025_Public_shp.zip"),
-                          Force = FALSE) {
+#' https://www.protectedplanet.net/en/thematic-areas/wdpa
+FUN.DownWDPA <- function(wdpa_url = FALSE,
+                         wdpa_destination = file.path(Dir.Capfitogen.WDPA, "WDPA_Feb2025_Public_shp.zip"),
+                         Force = FALSE) {
+  # get the current month and year (from system time)
+  MmmYYYY <- format(Sys.Date(), "%b%Y")
+
   # set a path to wdpa shapefiles
   wdpa_path <- file.path(Dir.Capfitogen.WDPA, "wdpa")
-  
+
   # define the file name of global wdpa shapefile to be created
   FNAME <- file.path(wdpa_path, "global_wdpa_polygons.gpkg")
-  
+
   # check if the final wdpa file already exists and whether to overwrite
   if (!Force & file.exists(FNAME)) {
     message(paste0("A global wdpa file with polygons exists already: ", FNAME))
   } else {
     if (!file.exists(wdpa_destination)) {
-      # download if Force = TRUE or the file isn't already there
-      message("downloading zipped WDPA shapefiles, ca 4GB")
-      # set long timeout to avoid interrupting download
-      options(timeout = 1000)
-      # download the zipped files
-      download.file(url = wdpa_url,
-                    destfile = wdpa_destination,
-                    cacheOK = FALSE)
+      # check if a wdpa url is provided
+      if (wdpa_url == FALSE) {
+        message("please provide a valid url for download.
+            Download links change monthly, and follow the format
+            https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Apr2025_Public_shp.zip.
+            See https://www.protectedplanet.net/en/thematic-areas/wdpa?tab=WDPA")
+      } else {
+        # start download
+        message("downloading zipped WDPA shapefiles, ca 4GB")
+        # set long timeout to avoid interrupting download
+        options(timeout = 10000)
+        # download the zipped files
+        download.file(
+          url = wdpa_url,
+          destfile = wdpa_destination,
+          cacheOK = FALSE
+        )
+      }
+
+      # unzip files
+      message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
+      unzip(zipfile = wdpa_destination, exdir = Dir.Capfitogen.WDPA)
+
+      # unzip split shapefile downloads
+      message("unzipping shapefiles split in download")
+
+      shapefile_names <- c(
+        paste0("WDPA_", MmmYYYY, "_Public_shp-points.cpg"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-points.dbf"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-points.prj"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-points.shp"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-points.shx"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-polygons.cpg"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-polygons.dbf"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-polygons.prj"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-polygons.shp"),
+        paste0("WDPA_", MmmYYYY, "_Public_shp-polygons.shx")
+      )
+
+      shapefile_paths <- file.path(wdpa_path, shapefile_names)
+
+      # loop over zip directories with parts of the global data (numbered 0, 1, 2)
+      for (i in 0:2) {
+        # define name of the current directory to be unzipped
+        zipfilename <-
+          file.path(
+            Dir.Capfitogen.WDPA,
+            paste0("WDPA_", MmmYYYY, "_Public_shp_", i, ".zip")
+          )
+
+        # unzip the directory containing shapefiles
+        unzip(zipfile = zipfilename, exdir = wdpa_path)
+        message(paste0("unzipped ", zipfilename, "\nto ", wdpa_path))
+
+        # rename shapefiles with numbers to prevent overwriting them
+        new_shapefile_names <- file.path(wdpa_path, paste0(i, "_", shapefile_names))
+        file.rename(from = shapefile_paths, to = new_shapefile_names)
+      }
+
+      # delete unnecessary files
+      message("deleting redundant files (translations etc.)")
+      files_to_keep <- c(
+        wdpa_path,
+        wdpa_destination,
+        file.path(
+          Dir.Capfitogen.WDPA,
+          paste0("WDPA_sources_", MmmYYYY, ".csv")
+        )
+      )
+
+      files_to_delete <-
+        list.files(Dir.Capfitogen.WDPA,
+          full.names = TRUE
+        )[list.files(Dir.Capfitogen.WDPA,
+          full.names = TRUE
+        ) %nin% files_to_keep]
+      file.remove(files_to_delete, recursive = TRUE)
+
+      # prepare list of shapefiles to be combined
+      wdpa_polygon_shapefiles <-
+        # list polygon shapefiles in WDPA directory
+        substr(
+          unique(sub(
+            "\\..*", "",
+            list.files(wdpa_path)[grep(
+              pattern = "polygon",
+              x = shapefile_names
+            )]
+          )),
+          3, 34
+        )
+
+      shapefile_list <- list()
+
+      for (i in 0:2) {
+        # read in all the polygon shapefile layers
+        layer_name <- paste0(i, "_", wdpa_polygon_shapefiles)
+        shapefile_list[[i + 1]] <-
+          read_sf(dsn = wdpa_path, layer = layer_name)
+      }
+
+      # merge parts into one global shapefile
+      message("combining parts of the WDPA shapefile. This can take a while ---")
+      wdpa <- do.call(rbind, shapefile_list)
+      message("Complete WDPA successfully combined.")
+
+      # wdpa$WDPAID <- as.character(wdpa$WDPAID)
+      # wdpa$text_field <- iconv(wdpa$text_field, to = "ASCII//TRANSLIT")
+
+      # save complete wdpa
+      message("save as GeoPackage")
+      st_write(wdpa, file.path(wdpa_path, "global_wdpa_polygons.gpkg"))
+      message(paste0(
+        "global WDPA saved as: ",
+        file.path(wdpa_path, "global_wdpa_polygons.gpkg")
+      ))
+
+      message("save as shapefile")
+      # st_write(wdpa, FNAME)
+      st_write(
+        wdpa,
+        "global_wdpa_polygons.shp",
+        layer_options = "ENCODING=UTF-8",
+        field_type = c(WDPAID = "Character")
+      )
+      message("global WDPA saved as global_wdpa_polygons.shp")
     }
-    
-    # unzip files
-    message(paste("unzipping WDPA shapefiles to", Dir.Capfitogen.WDPA))
-    unzip(zipfile = wdpa_destination, exdir = Dir.Capfitogen.WDPA)
-    
-    # unzip split shapefile downloads
-    message("unzipping shapefiles split in download")
-    
-    shapefile_names <- c(
-      "WDPA_Feb2025_Public_shp-points.cpg",
-      "WDPA_Feb2025_Public_shp-points.dbf",
-      "WDPA_Feb2025_Public_shp-points.prj",
-      "WDPA_Feb2025_Public_shp-points.shp",
-      "WDPA_Feb2025_Public_shp-points.shx",
-      "WDPA_Feb2025_Public_shp-polygons.cpg",
-      "WDPA_Feb2025_Public_shp-polygons.dbf",
-      "WDPA_Feb2025_Public_shp-polygons.prj",
-      "WDPA_Feb2025_Public_shp-polygons.shp",
-      "WDPA_Feb2025_Public_shp-polygons.shx"
-    )
-    
-    shapefile_paths <- file.path(wdpa_path, shapefile_names)
-    
-    # loop over zip directories with parts of the global data (numbered 0, 1, 2)
-    for (i in 0:2) {
-      # define name of the current directory to be unzipped
-      zipfilename <-
-        file.path(Dir.Capfitogen.WDPA,
-                  paste0("WDPA_Feb2025_Public_shp_", i, ".zip"))
-      
-      # unzip the directory containing shapefiles
-      unzip(zipfile = zipfilename, exdir = wdpa_path)
-      message(paste0("unzipped ", zipfilename, "\nto ", wdpa_path))
-      
-      # rename shapefiles with numbers to prevent overwriting them
-      new_shapefile_names <- file.path(wdpa_path, paste0(i, "_", shapefile_names))
-      file.rename(from = shapefile_paths, to = new_shapefile_names)
-    }
-    
-    # delete unnecessary files
-    message("deleting redundant files (translations etc.)")
-    files_to_keep <- c(
-      wdpa_path,
-      wdpa_destination,
-      file.path(Dir.Capfitogen.WDPA, "WDPA_sources_Feb2025.csv")
-    )
-    
-    files_to_delete <-
-      list.files(Dir.Capfitogen.WDPA, full.names = TRUE)[list.files(Dir.Capfitogen.WDPA, full.names = TRUE) %nin% files_to_keep]
-    file.remove(files_to_delete, recursive = TRUE)
-    
-    # prepare list of shapefiles to be combined
-    wdpa_polygon_shapefiles <-
-      # list polygon shapefiles in WDPA directory
-      substr(unique(sub("\\..*", "", list.files(wdpa_path)[grep(pattern = "polygon", x = shapefile_names)])), 3, 34)
-    
-    shapefile_list <- list()
-    
-    for (i in 0:2) {
-      # read in all the polygon shapefile layers
-      layer_name = paste0(i, "_", wdpa_polygon_shapefiles)
-      shapefile_list[[i + 1]] <-
-        read_sf(dsn = wdpa_path, layer = layer_name)
-    }
-    
-    # merge parts into one global shapefile
-    message("combining parts of the WDPA shapefile. This can take a while ---")
-    wdpa <- do.call(rbind, shapefile_list)
-    message("Complete WDPA successfully combined.")
-    
-    # wdpa$WDPAID <- as.character(wdpa$WDPAID)
-    # wdpa$text_field <- iconv(wdpa$text_field, to = "ASCII//TRANSLIT")
-    
-    # save complete wdpa
-    message("save as GeoPackage")
-    st_write(wdpa, file.path(wdpa_path, "global_wdpa_polygons.gpkg"))
-    message(paste0(
-      "global WDPA saved as: ",
-      file.path(wdpa_path, "global_wdpa_polygons.gpkg")
-    ))
-    
-    message("save as shapefile")
-    #st_write(wdpa, FNAME)
-    st_write(
-      wdpa,
-      "global_wdpa_polygons.shp",
-      layer_options = "ENCODING=UTF-8",
-      field_type = c(WDPAID = "Character")
-    )
-    message("global WDPA saved as global_wdpa_polygons.shp")
   }
 }
 

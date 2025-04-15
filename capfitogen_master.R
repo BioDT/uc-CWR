@@ -102,75 +102,40 @@ Species_ls <- FUN.DownGBIF(
   parallel = 1 # no speed gain here for parallelising on personal machine
 )
 
-## Environmental Data -----------------------------------------------------
-# ### Bioclomatic data ------
-# ##' 19 BioClim variables
-# ##' FUN.DownBV uses KrigR to download ERA5 data from Climate Data Store (CDS)
-# ##' is each file of each variable >20GB? 
-# ##' Will this download Global Multi-resolution Terrain Elevation Data
-# ##' (GMTED2010) as well?
-# ##' Temporal coverage: January 1950 to present ? 
-# ##' https://cds.climate.copernicus.eu/datasets/derived-era5-land-daily-statistics?tab=overview
-# message("Downloading new or loading existing 19 BioClim bioclimatic variables")
-# 
-# # Check for existing BioClim data file
-# existing_bioclim_file <- file.path(Dir.Data.Envir, "BV_1985-2015.nc")
-# if (file.exists(existing_bioclim_file)) {
-#   message("Using existing BioClim data")
-#   bioclim_variables <- terra::rast(existing_bioclim_file)
-# } else {
-#   bioclim_variables <- FUN.DownBV(
-#     T_Start = 1999, # what year to begin climatology calculation?
-#     T_End = 1999, # what year to end climatology calculation?
-#     Dir = Dir.Data.Envir, # where to store the data output on disk
-#     Force = FALSE # do not overwrite already present data
-#   )
-# }
-# 
-# # make sure the BioClim data have the correct names
-# BioClim_names <- c( 
-#   # see https://www.worldclim.org/data/bioclim.html
-#   "BIO1_Annual_Mean_Temperature",
-#   "BIO2_Mean_Diurnal_Range",
-#   "BIO3_Isothermality",
-#   "BIO4_Temperature_Seasonality",
-#   "BIO5_Max_Temperature_of_Warmest_Month",
-#   "BIO6_Min_Temperature_of_Coldest_Month",
-#   "BIO7_Temperature_Annual_Range",
-#   "BIO8_Mean_Temperature_of_Wettest_Quarter",
-#   "BIO9_Mean_Temperature_of_Driest_Quarter",
-#   "BIO10_Mean_Temperature_of_Warmest_Quarter",
-#   "BIO11_Mean_Temperature_of_Coldest_Quarter",
-#   "BIO12_Annual_Precipitation",
-#   "BIO13_Precipitation_of_Wettest_Month",
-#   "BIO14_Precipitation_of_Driest_Month",
-#   "BIO15_Precipitation_Seasonality",
-#   "BIO16_Precipitation_of_Wettest_Quarter",
-#   "BIO17_Precipitation_of_Driest_Quarter",
-#   "BIO18_Precipitation_of_Warmest_Quarter",
-#   "BIO19_Precipitation_of_Coldest_Quarter")
-# names(bioclim_variables) <- BioClim_names
+## Environmental Data (CAPFITOGEN) --------------------------------------------
+# make a template raster to resample to
+template_raster <- rast(nrows=1800, ncols=4320, nlyr=1)
+values(template_raster) <- rnorm(ncell(template_raster),1,1)
+ext(template_raster) <- 
+print(ext(example_r))
 
-### CAPFITOGEN data ------
 # download the default data from CAPFITOGEN.
-FUN.DownCAPFITOGEN(
+all_predictors <- FUN.DownCAPFITOGEN(
   Dir = Dir.Data.Envir,
   Force = FALSE,
-  resample_to_match = FALSE # bioclim_variables[[1]]
+  resample_to_match = template_raster
 )
 
 ## Protected areas database -----------------------------------------------
 #' download shapefiles for protected areas to overlay with Complementa tool.
 #' The FUN.DownWDPA function will save the file to a folder, but not load it 
 #' into RStudio as an object.
+MmmYYYY <- format(Sys.Date(), "%b%Y")
 FUN.DownWDPA(
   # download from url:
-  wdpa_url = "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_Feb2025_Public_shp.zip",
+  wdpa_url = paste0(
+    "https://d1gam3xoknrgr2.cloudfront.net/current/WDPA_",
+    MmmYYYY, "_Public_shp.zip"),
   # save the downloaded zipfile as:
   wdpa_destination = file.path(Dir.Capfitogen.WDPA,
-                               "WDPA_Feb2025_Public_shp.zip"),
+                               paste0("WDPA_",
+                                      MmmYYYY,
+                                      "_Public_shp.zip")),
   # do not overwrite existing data
   Force = FALSE)
+
+# TEMP check wdpa files
+wdpa <- read_sf("Data/Capfitogen/capfitogen_world_data_googledrive_links.csv")
 
 # if supplied, crop all the data to a map of native species range
 
@@ -205,17 +170,18 @@ write.table(Species_ls[["occs"]],
 
 ## Variable selection ---------------------------------------------------------
 message("running variable selection")
-# combine variables
-all_predictors <- c(bioclim_variables, 
-                    #edaphic_variables, # Error in xcor[mx[1], mx[2]] : subscript out of bounds / In addition: Warning message: / [spatSample] fewer values returned than requested 
-                    geophysical_variables)
+
+# predefine list of variables to keep
+predictors_to_keep <- c(
+  
+)
 
 # run variable selection based on variable inflation factor usdm::vif
 predictor_vifs <-
   vifcor(
-    all_predictors,# replace with either BV, EV, GV to run separately per type
+    all_predictors,
     th = 0.8, # threshold of correlation
-    keep = NULL, # if wanted, list variables to keep no matter what
+    keep = NULL, # if wanted, vector of variables to keep no matter what
     size = 5000, # subset size in case of big data (default 5000)
     method = "pearson" # 'pearson','kendall','spearman'
   )
