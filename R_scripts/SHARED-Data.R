@@ -506,10 +506,12 @@ FUN.DownCAPFITOGEN <-
       for (i in 1:nrow(tif_files)) {
         file_name = tif_files$name[i]
         message(file_name)
+        if (!file.exists(paste0(Dir, "/capfitogen/", tif_files$name[i]))){
         download.file(
           url = tif_files$download_url[i],
           destfile = paste0(Dir, "/capfitogen/", tif_files$name[i])
-        )
+          )
+        }
       }
 
       # list the downloaded files
@@ -523,7 +525,7 @@ FUN.DownCAPFITOGEN <-
         file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
         raster_i <- rast(file_path_i)
         # rename raster
-        names(raster_i) <- googledrive_data_files$name[i]
+        names(raster_i) <- tif_files$name[i]
         message(names(raster_i))
         
         # resample
@@ -540,7 +542,7 @@ FUN.DownCAPFITOGEN <-
           
           terra::crs(raster_i) <- projection_to_match
           
-          raster_i <- terra::resample(raster_i, resample_to_match)
+          try(raster_i <- terra::resample(raster_i, resample_to_match))
         } else {
           stop("Invalid input for resample_to_match. Must be a SpatRaster or NULL.")
         }

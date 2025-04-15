@@ -135,10 +135,36 @@ FUN.DownWDPA(
   Force = FALSE)
 
 # TEMP check wdpa files
-wdpa <- read_sf("Data/Capfitogen/capfitogen_world_data_googledrive_links.csv")
+wdpa <- read_sf(file.path(Dir.Capfitogen.WDPA, 
+                          "wdpa", "global_wdpa_polygons.gpkg"))
 
 # if supplied, crop all the data to a map of native species range
-
+crop_to_native_range <- function(
+    Dir = getwd(),
+    Force = TRUE,
+    native_range_map = NULL) {
+  # define a file name
+  FNAME <- file.path("Data/Environment/capfitogen_cropped.nc")
+  
+  # check if cropped data already exists and whether to overwrite
+  if (!Force & file.exists(FNAME)) {
+    message(
+      paste0(FNAME, "exists already. It has been loaded from the disk.
+             If you wish to override the present data, please specify Force = TRUE"))
+    capfitogen_cropped <- rast(FNAME)
+    return(capfitogen_cropped)
+  } else if (!file.exists(FNAME)) {
+    # if Force = TRUE or there is no preexisting data, 
+    # check that the native range map is supplied and valid
+    if (!is.null(native_range_map)) {
+      # get the extent of the supplied native range
+      
+      # crop the environmental data to the native range
+      
+      # save the cropped version
+    }
+  }
+}
 
 # CAPFITOGEN pipeline =========================================================
 message(paste("------------------------------", 
