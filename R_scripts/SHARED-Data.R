@@ -473,7 +473,7 @@ FUN.DownCAPFITOGEN <-
       message("Start downloading 10x10 data from Capfitogen google drive.")
       
       # scrape Capfitogen's google drive to get direct download links (rdatamaps/world/10x10)
-      folder_id <- "1kPb27NnJyh7HKt774okYE_dWSCjS8--a" # "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u"
+      folder_id <- "1NdeKwneRNtJmdGc26mPKX1tWezraAt7m" # 10x10:"1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u" # for 20x20: "1kPb27NnJyh7HKt774okYE_dWSCjS8--a"
       embedded_url <- paste0("https://drive.google.com/embeddedfolderview?id=", 
                              folder_id, "#list")
       
@@ -520,7 +520,7 @@ FUN.DownCAPFITOGEN <-
       
       ## read in and format rasters one by one from file name ----
       rasters <- NULL
-      for (i in 1:length(file_list)) {
+      for (i in 1:10) { # length(file_list)
         file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
         raster_i <- rast(file_path_i)
         # rename raster
@@ -551,14 +551,13 @@ FUN.DownCAPFITOGEN <-
         rasters <- c(rasters, raster_i)
       }
       
-      typeof(rasters)
-      str(rasters)      
+      # convert list of rasters to a stack
+      rasters <- rast(rasters)
       
       ## save rasters ----
-      saveRDS(rasters, filename = "Data/Environment/capfitogen.RData")
       message(paste0("saving as netCDF:", FNAME))
       terra::writeCDF(rasters, filename = FNAME, overwrite = FALSE)
-      rasters
+      return(rasters)
     }
   }
 
