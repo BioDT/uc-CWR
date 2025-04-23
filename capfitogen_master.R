@@ -104,15 +104,15 @@ Species_ls <- FUN.DownGBIF(
 
 ## Environmental Data (CAPFITOGEN) --------------------------------------------
 # make a template raster to resample to
-template_raster <- rast(nrows=1800, ncols=4320, nlyr=1)
-values(template_raster) <- rnorm(ncell(template_raster),1,1)
-ext(template_raster) <- 
-print(ext(example_r))
+template_raster <- rast(nrows = 1800, 
+                        ncols = 4320, 
+                        nlyr = 1)
+crs(template_raster) <- "epsg:4326" # WGS84 - World Geodetic System 1984
 
 # download the default data from CAPFITOGEN.
 all_predictors <- FUN.DownCAPFITOGEN(
   Dir = Dir.Data.Envir,
-  Force = FALSE,
+  Force = TRUE,
   resample_to_match = template_raster
 )
 
@@ -138,6 +138,7 @@ FUN.DownWDPA(
 wdpa <- read_sf(file.path(Dir.Capfitogen.WDPA, 
                           "wdpa", "global_wdpa_polygons.gpkg"))
 
+## Crop extent ----
 # if supplied, crop all the data to a map of native species range
 crop_to_native_range <- function(
     Dir = getwd(),

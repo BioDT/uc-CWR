@@ -445,7 +445,6 @@ FUN.DownBV <- function(
   BV_ras
 }
 
-
 # CAPFITOGEN DATA DOWNLOAD ----------------------------------------------------
 # Download the standard data from CAPFITOGEN for the globe.
 FUN.DownCAPFITOGEN <-
@@ -474,7 +473,7 @@ FUN.DownCAPFITOGEN <-
       message("Start downloading 10x10 data from Capfitogen google drive.")
       
       # scrape Capfitogen's google drive to get direct download links (rdatamaps/world/10x10)
-      folder_id <- "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u"
+      folder_id <- "1kPb27NnJyh7HKt774okYE_dWSCjS8--a" # "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u"
       embedded_url <- paste0("https://drive.google.com/embeddedfolderview?id=", 
                              folder_id, "#list")
       
@@ -519,7 +518,7 @@ FUN.DownCAPFITOGEN <-
       message("downloaded files:")
       print(file_list)
       
-      # read in and format rasters one by one from file name
+      ## read in and format rasters one by one from file name ----
       rasters <- NULL
       for (i in 1:length(file_list)) {
         file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
@@ -528,12 +527,13 @@ FUN.DownCAPFITOGEN <-
         names(raster_i) <- tif_files$name[i]
         message(names(raster_i))
         
-        # resample
+        ## resample ----
         # if provided, resample to match another raster object's origin and resolution
         if (is.null(resample_to_match)) {
           message("No resampling.")
         } else if (inherits(resample_to_match, "SpatRaster")) {
-          message(paste0("Resampling rasters to match ", names(resample_to_match)))
+          message(paste("Resampling", names(raster_i),
+                        "to match", names(resample_to_match)))
           
           resample_to_match <- rast(resample_to_match)
           
@@ -542,7 +542,7 @@ FUN.DownCAPFITOGEN <-
           
           terra::crs(raster_i) <- projection_to_match
           
-          try(raster_i <- terra::resample(raster_i, resample_to_match))
+          tryCatch(raster_i <- terra::resample(raster_i, resample_to_match))
         } else {
           stop("Invalid input for resample_to_match. Must be a SpatRaster or NULL.")
         }
@@ -554,7 +554,8 @@ FUN.DownCAPFITOGEN <-
       typeof(rasters)
       str(rasters)      
       
-      # save rasters as a NetCDF file
+      ## save rasters ----
+      saveRDS(rasters, filename = "Data/Environment/capfitogen.RData")
       message(paste0("saving as netCDF:", FNAME))
       terra::writeCDF(rasters, filename = FNAME, overwrite = FALSE)
       rasters
