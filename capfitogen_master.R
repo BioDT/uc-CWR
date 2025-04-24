@@ -116,7 +116,7 @@ all_predictors <- FUN.DownCAPFITOGEN(
   resample_to_match = template_raster
 )
 
-## Protected areas database -----------------------------------------------
+## Protected areas database ---------------------------------------------------
 #' download shapefiles for protected areas to overlay with Complementa tool.
 #' The FUN.DownWDPA function will save the file to a folder, but not load it 
 #' into RStudio as an object.
@@ -134,38 +134,69 @@ FUN.DownWDPA(
   # do not overwrite existing data
   Force = FALSE)
 
-# TEMP check wdpa files
-wdpa <- read_sf(file.path(Dir.Capfitogen.WDPA, 
-                          "wdpa", "global_wdpa_polygons.gpkg"))
-
-## Crop extent ----
-# if supplied, crop all the data to a map of native species range
+## Crop extents ---------------------------------------------------------------
+# if supplied, crop all the data to a map of native species range. 
+# Define function
 crop_to_native_range <- function(
     Dir = getwd(),
     Force = TRUE,
     native_range_map = NULL) {
-  # define a file name
-  FNAME <- file.path("Data/Environment/capfitogen_cropped.nc")
+  
+  # define file names
+  FNAME_env <- file.path("Data/Environment/capfitogen_cropped.nc")
+  FNAME_wdpa <- file.path("Capfitogen/wdpa/wdpa_cropped.gpkg")
   
   # check if cropped data already exists and whether to overwrite
-  if (!Force & file.exists(FNAME)) {
-    message(
-      paste0(FNAME, "exists already. It has been loaded from the disk.
-             If you wish to override the present data, please specify Force = TRUE"))
-    capfitogen_cropped <- rast(FNAME)
-    return(capfitogen_cropped)
-  } else if (!file.exists(FNAME)) {
-    # if Force = TRUE or there is no preexisting data, 
-    # check that the native range map is supplied and valid
-    if (!is.null(native_range_map)) {
-      # get the extent of the supplied native range
+  if (!Force & file.exists(FNAME_env) & file.exists(FNAME_wdpa)) {
+    message(paste0(FNAME_env, " and ", FNAME_wdpa, 
+                   " exist already. They have been loaded from the disk. ",
+                   "If you wish to override the present data, ",
+                   "please specify Force = TRUE"))
+    capfitogen_cropped <- rast(FNAME_env)
+    wdpa_cropped <- read_sf(FNAME_wdpa)
+    return(list(env = capfitogen_cropped, wdpa = wdpa_cropped))
+  } 
+  
+  # proceed with cropping if native_range_map is valid
+  if (!is.null(native_range_map)) {
+    # attempt to load native range map safely
+    tryCatch({
+      native_range_raster <- rast(native_range_map)
+      native_range_extent <- ext(native_range_raster)
       
-      # crop the environmental data to the native range
+      if (is.null(native_range_extent) || 
+          any(is.na(c(xmin(native_range_extent), xmax(native_range_extent), 
+                      ymin(native_range_extent), ymax(native_range_extent))))) {
+        stop("native_range_map does not have a valid extent.")
+      }
       
-      # save the cropped version
-    }
+      # crop and save the environmental data
+      message("cropping environmental data")
+      all_predictors_cropped <- terra::crop(all_predictors, native_range_extent)
+      writeCDF(all_predictors_cropped, FNAME_env)
+      
+      # crop and save protected areas (wdpa)
+      message("cropping protected areas")
+      wdpa <- read_sf(file.path(Dir, "wdpa", "global_wdpa_polygons.gpkg"))
+      wdpa_cropped <- terra::crop(wdpa, native_range_extent)
+      st_write(wdpa_cropped, FNAME_wdpa)
+      
+      return(list(env = all_predictors_cropped, wdpa = wdpa_cropped))
+      
+    }, error = function(e) {
+      stop("Error reading or processing native_range_map: ", e$message)
+    })
+    
+  } else {
+    stop("native_range_map must be provided when Force is TRUE or data does not exist.")
   }
 }
+
+# Apply cropping function
+crop_to_native_range(
+    Dir = Dir.Base,
+    Force = FALSE,
+    native_range_map = NULL)
 
 # CAPFITOGEN pipeline =========================================================
 message(paste("------------------------------", 
