@@ -16,6 +16,7 @@ install.load.package <- function(x) {
 package_vec <- c(
   'automap', # automatic interpolation (for KrigR)
   'cowplot', # grid plotting
+  'curl', # downloading data
   'ggplot2', # ggplot machinery
   'ggpp',
   'ggpmisc', # table plotting in ggplot environment

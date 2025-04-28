@@ -446,14 +446,50 @@ FUN.DownBV <- function(
 }
 
 # CAPFITOGEN DATA DOWNLOAD ----------------------------------------------------
-# Download the standard data from CAPFITOGEN for the globe.
+## Define a function for downloading data from google drives ----
+download_from_google_drive <- function(
+    file_id, 
+    dest_path) {
+  require(curl)
+
+  # Temporary file to capture cookies
+  tmp_cookie <- tempfile()
+
+  # First request to get the "confirm" token (if needed)
+  url1 <- paste0("https://drive.google.com/uc?export=download&id=", file_id)
+
+  h <- curl::new_handle()
+  curl::handle_setopt(h, cookiefile = tmp_cookie, cookiejar = tmp_cookie)
+
+  con <- curl::curl(url1, "rb", handle = h)
+  page <- readLines(con, warn = FALSE)
+  close(con)
+
+  # Look for confirm token
+  confirm <- regmatches(page, regexpr("confirm=([0-9A-Za-z_]+)", page))
+  confirm <- sub("confirm=", "", confirm)
+
+  if (length(confirm) > 0) {
+    # If token found, make second request with confirmation
+    url2 <- paste0("https://drive.google.com/uc?export=download&confirm=", confirm, "&id=", file_id)
+
+    curl_download(url2, destfile = dest_path, handle = h, mode = "wb")
+  } else {
+    # If no token, download directly
+    curl_download(url1, destfile = dest_path, handle = h, mode = "wb")
+  }
+
+  unlink(tmp_cookie)
+}
+
+## Define download function for the standard data from CAPFITOGEN (world) ----
 FUN.DownCAPFITOGEN <-
   function(Dir = getwd(),
            Force = FALSE,
            resample_to_match = NULL) {
     # define a file name
     FNAME <- file.path("Data/Environment/capfitogen.nc")
-    
+
     # check if file already exists and whether to overwrite
     if (!Force & file.exists(FNAME)) {
       capfitogen_rasters <- rast(FNAME)
@@ -466,97 +502,100 @@ FUN.DownCAPFITOGEN <-
       )
       return(capfitogen_rasters)
     }
-    
+
     # if Force=TRUE or the file doesn't already exist:
     if (Force | !file.exists(FNAME)) {
-      ## download data from Capfitogen Google drive ----
+      ### download data from Capfitogen Google drive ----
+      # https://drive.google.com/drive/folders/1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u
       message("Start downloading 10x10 data from Capfitogen google drive.")
-      
+
       # scrape Capfitogen's google drive to get direct download links (rdatamaps/world/10x10)
-      folder_id <- "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u" # for 20x20: "1kPb27NnJyh7HKt774okYE_dWSCjS8--a"
-      embedded_url <- paste0("https://drive.google.com/embeddedfolderview?id=", 
-                             folder_id, "#list")
-      
+      folder_id <- "1Xxt1ztTkLITAUbTyJzjePs2CpfETwF_u" 
+      embedded_url <- paste0(
+        "https://drive.google.com/embeddedfolderview?id=",
+        folder_id, "#list"
+      )
+
       # Scrape the page
       page <- read_html(embedded_url)
-      
+
       # Extract <a> tags (these contain filenames + links)
-      file_links <- page %>% html_nodes("a") %>% html_attr("href")
-      file_names <- page %>% html_nodes("a") %>% html_text()
-      
+      file_links <- page %>%
+        html_nodes("a") %>%
+        html_attr("href")
+      file_names <- page %>%
+        html_nodes("a") %>%
+        html_text()
+
       tif_files <- data.frame(name = file_names, link = file_links)
-      
+
       # Extract file ID from link
-      tif_files$file_id <- substr(tif_files$link, 
-                                  start = 33, stop = 65)
-      tif_files$download_url <- paste0("https://drive.google.com/uc?export=download&id=", tif_files$file_id)
-      
-      message("installing gdown with pip install")
-      system("pip install gdown")
-      
+      tif_files$file_id <- substr(tif_files$link,
+        start = 33, stop = 65
+      )
+      tif_files$download_url <- paste0(
+        "https://drive.google.com/uc?export=download&id=", tif_files$file_id)
+
       # create directory to store tiff files
-      dir.create(path = paste0(Dir, "/capfitogen"),
-                 showWarnings = FALSE)
+      dir.create(
+        path = paste0(Dir, "/capfitogen"),
+        showWarnings = FALSE
+      )
       
-      # set long timeout to aoid interrupting downloads
-      options(timeout = 1000)
-      
-      # download each file separately by google id
       for (i in 1:nrow(tif_files)) {
-        file_name = tif_files$name[i]
-        message(file_name)
-        if (!file.exists(paste0(Dir, "/capfitogen/", tif_files$name[i]))){
-        download.file(
-          url = tif_files$download_url[i],
-          destfile = paste0(Dir, "/capfitogen/", tif_files$name[i])
-          )
+        file_name <- tif_files$name[i]
+        file_id <- tif_files$file_id[i]
+        message("Downloading: ", file_name)
+        
+        dest_path <- file.path(Dir, "capfitogen", file_name)
+        
+        if (!file.exists(dest_path)) {
+          download_from_google_drive(file_id, dest_path)
         }
       }
 
       # list the downloaded files
       file_list <- list.files(paste0(Dir.Data.Envir, "/capfitogen"))
-      message("downloaded files:")
-      print(file_list)
-      
-      ## read in and format rasters one by one from file name ----
+
+      ### read in and format rasters one by one from file name ----
       rasters <- NULL
-      for (i in 1:length(file_list)) {
+      for (i in 1:50) { # length(file_list)
         file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
         raster_i <- rast(file_path_i)
         # rename raster
         names(raster_i) <- tif_files$name[i]
-        message(names(raster_i))
         
-        # there is a problem with some of the rasters. Try changing the extent
-        ext(raster_i) <- c(-180, 180, -60, 90)
-        
-        ## resample ----
+        ### resample ----
         # if provided, resample to match another raster object's origin and resolution
         if (is.null(resample_to_match)) {
           message("No resampling.")
         } else if (inherits(resample_to_match, "SpatRaster")) {
-          message(paste("Resampling", names(raster_i),
-                        "to match", names(resample_to_match)))
-          
+          # read in the raster to use as template to match
           resample_to_match <- rast(resample_to_match)
-          
-          ## project downloaded rasters to match resample_to_match file
+
+          # project downloaded rasters to match resample_to_match file
           projection_to_match <- terra::crs(resample_to_match)
-          
+
           terra::crs(raster_i) <- projection_to_match
-          
+
+          # resample
+          message(paste(
+            "Resampling", names(raster_i),
+            "to match", names(resample_to_match)
+          ))
+
           tryCatch(raster_i <- terra::resample(raster_i, resample_to_match))
         } else {
           stop("Invalid input for resample_to_match. Must be a SpatRaster or NULL.")
         }
-      
+
         message(paste("adding raster", names(raster_i)))
         rasters <- c(rasters, raster_i)
       }
-      
+
       # convert list of rasters to a stack
       rasters <- rast(rasters)
-      
+
       ## save rasters ----
       message(paste0("saving as netCDF:", FNAME))
       terra::writeCDF(rasters, filename = FNAME, overwrite = TRUE)
