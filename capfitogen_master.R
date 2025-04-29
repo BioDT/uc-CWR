@@ -88,7 +88,7 @@ message(paste("------------------------------",
               sep = "\n"))
 
 ## Run SHARED-Data script -------------------------------------------------
-## defines FUN.DownGBIF(), FUN.DownBV(), FUN.DownEV()
+## defines functions used to download data
 source(file.path(Dir.R_scripts, "SHARED-Data.R"))
 
 ## GBIF Data --------------------------------------------------------------
@@ -110,11 +110,13 @@ template_raster <- rast(nrows = 1800,
 crs(template_raster) <- "epsg:4326" # WGS84 - World Geodetic System 1984
 
 # download the default data from CAPFITOGEN.
+# development goal: replace with argument to give alternative download links
 all_predictors <- FUN.DownCAPFITOGEN(
   Dir = Dir.Data.Envir,
-  Force = TRUE,
+  Force = FALSE,
   resample_to_match = template_raster
 )
+names(all_predictors)
 
 ## Protected areas database ---------------------------------------------------
 #' download shapefiles for protected areas to overlay with Complementa tool.
@@ -192,11 +194,19 @@ crop_to_native_range <- function(
   }
 }
 
-# Apply cropping function
-crop_to_native_range(
+# load native species range map
+range_map <- NULL
+
+# apply cropping function
+if(is.null(range_map)) {
+  message("global extent")
+} else {
+  message(paste("cropping to native range map: ", names(range_map)))
+  crop_to_native_range(
     Dir = Dir.Base,
     Force = FALSE,
-    native_range_map = NULL)
+    native_range_map = range_map)
+}
 
 # CAPFITOGEN pipeline =========================================================
 message(paste("------------------------------", 
@@ -229,17 +239,17 @@ write.table(Species_ls[["occs"]],
 ## Variable selection ---------------------------------------------------------
 message("running variable selection")
 
+# make a new function to get the most extreme monthly means?
+
 # predefine list of variables to keep
-predictors_to_keep <- c(
-  
-)
+predefined_predictors_to_keep <- NULL
 
 # run variable selection based on variable inflation factor usdm::vif
 predictor_vifs <-
   vifcor(
     all_predictors,
     th = 0.8, # threshold of correlation
-    keep = NULL, # if wanted, vector of variables to keep no matter what
+    keep = predefined_predictors_to_keep, # if wanted, vector of variables to keep no matter what
     size = 5000, # subset size in case of big data (default 5000)
     method = "pearson" # 'pearson','kendall','spearman'
   )
@@ -254,17 +264,6 @@ print(variables_to_keep)
 predictors <- all_predictors[[(variables_to_keep)]]
 predictors <- raster::stack(predictors)
 
-# get bioclimatic variable names that matches Capfitogen's format
-predictor_names <- names(predictors)
-bioclim_predictor_names <- predictor_names[grep("BIO", predictor_names)]
-bioclim_predictor_codes <- sub("_.*", "", tolower(bioclim_predictor_names))
-bioclim_predictor_codes <- sub("o", "o_", bioclim_predictor_codes)
-capfitogen_bioclim_names <- read.delim("Capfitogen/bioclim.txt", 
-                                       fileEncoding = "latin1")
-bioclim_subset <-
-  capfitogen_bioclim_names[capfitogen_bioclim_names$VARCODE %in% bioclim_predictor_codes, ]
-bioclim_predictor_names_capfitogen <- bioclim_subset$VARDESCR
-
 # save variables in CAPFITOGEN folder
 if (!dir.exists(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))) {
   dir.create(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"),
@@ -275,18 +274,12 @@ if (!dir.exists(file.path(Dir.Capfitogen, "rdatapoints/world/9x9"))) {
 
 saveRDS(predictors,
         "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
-save(predictors,
-     file = "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
-
-# names(predictors[[1:length(bioclim_predictor_names)]]) <- bioclim_predictor_codes
-predictor_names_for_saving <-
-  c(bioclim_predictor_codes,
-    predictor_names[grep("BIO", predictor_names, invert = TRUE)]
-    )
+# save(predictors,
+#      file = "Capfitogen/rdatapoints/world/9x9/base9x9.RData")
 
 for (i in 1:dim(predictors)[3]) {
   file_name_path = file.path("Capfitogen/rdatamaps/world/9x9",
-                             paste0(predictor_names_for_saving[i],".tif"))
+                             paste0(names(predictors)[i],".tif"))
   writeRaster(predictors[[i]],
               file_name_path,
               overwrite = TRUE)
@@ -319,7 +312,7 @@ if (!file.exists(file.path(Dir.Capfitogen.Error,"process_info.txt"))) {
   file.create(file.path(Dir.Capfitogen.Error,"process_info.txt"))
 }
 
-# add geophysical variables to list of possible variables
+# add new geophysical variables to list of possible variables
 load(file.path(Dir.Capfitogen, "geophys.RData"))
 if (nrow(geophys[geophys$VARCODE == "wind_max", ]) < 1) {
   geophys <- rbind(
@@ -337,27 +330,35 @@ if (nrow(geophys[geophys$VARCODE == "wind_max", ]) < 1) {
   )
   save(geophys, file = file.path(Dir.Capfitogen, "geophys.RData"))
   
-  # rename geophysical variable files ---- NB! will break when edaphic vars are added...
-  number_of_geophys_variables <- length(predictor_names[grep("BIO",
-                                                             predictor_names,
-                                                             invert = TRUE)])
-  for (i in 1:number_of_geophys_variables) {
-    from_name = predictor_names[grep("BIO",
-                                     predictor_names,
-                                     invert = TRUE)][i]
-    
-    to_name = geophys[geophys$VARDESCR == from_name, "VARCODE"][1]
-    file.rename(
-      from = file.path(
-        "Capfitogen/rdatamaps/world/9x9",
-        paste0(from_name, ".tif")),
-      to = file.path("Capfitogen/rdatamaps/world/9x9",
-                     paste0(to_name, ".tif"))
-    )
-  }
+#   # rename geophysical variable files ---- NB! will break if edaphic vars are added...
+#   number_of_geophys_variables <- length(predictor_names[grep("BIO",
+#                                                              predictor_names,
+#                                                              invert = TRUE)])
+#   for (i in 1:number_of_geophys_variables) {
+#     from_name = predictor_names[grep("BIO",
+#                                      predictor_names,
+#                                      invert = TRUE)][i]
+#     
+#     to_name = geophys[geophys$VARDESCR == from_name, "VARCODE"][1]
+#     file.rename(
+#       from = file.path(
+#         "Capfitogen/rdatamaps/world/9x9",
+#         paste0(from_name, ".tif")),
+#       to = file.path("Capfitogen/rdatamaps/world/9x9",
+#                      paste0(to_name, ".tif"))
+#     )
+#   }
 }
 
-rm(geophys)
+# find names of bioclimatic, edaphic, and geophysical variables
+load(file.path(Dir.Capfitogen, "edaph.RData"))
+load(file.path(Dir.Capfitogen, "bioclim.RData"))
+
+edaphic_variables     <- intersect(edaph$VARCODE, names(predictors))
+bioclimatic_variables <- intersect(bioclim$VARCODE, names(predictors))
+geophysical_variables <- intersect(geophys$VARCODE, names(predictors))
+
+rm(bioclim, edaph, geophys)
 
 ## Clustering and map creation: ELCmapas ---------------------------------------
 message("setting parameters and running ELC map script (ecogeographic land characterization)")
@@ -366,18 +367,18 @@ ruta <- Dir.Capfitogen # path to capfitogen scripts
 resultados <- Dir.Capfitogen.ELCMap # directory to place results
 pasaporte <- pasaporte_file_name # species occurrence data
 
-pais <- "world" # global extent - big modifications will be necessary to use different extent
+pais <- "world" # global extent - big modifications will be necessary to use different resolution
 geoqual <- FALSE
-totalqual<-30 # Only applies if GEOQUAL=TRUE, must be a value between 0 and 100
+totalqual <- 30 # Only applies if GEOQUAL=TRUE, must be a value between 0 and 100
 duplicat <- TRUE # duplicat=TRUE indicates that records of the same GENUS/SPECIES/SUBTAXA will be deleted 
 distdup <- 1 # distance threshold in km to remove duplicates from same population
 resol1 <- "celdas 9x9 km aprox (4.5 arc-min)" # resolution
 latitud <- FALSE #Only applies if ecogeo=TRUE; whether to use latitude variable (Y) as a geophysical variable from 'pasaporte'
 longitud <- FALSE 
 
-bioclimv <- bioclim_predictor_names_capfitogen #
-edaphv <- names(geophysical_variables)#names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
-geophysv <- names(geophysical_variables) # geophysical variables
+bioclimv <- bioclimatic_variables #
+edaphv <- edaphic_variables #names(edaphic_variables) #  edaphic variables (defaults from SOILGRIDS)
+geophysv <- geophysical_variables # geophysical variables
 
 maxg <- 20 # maximum number of clusters per component 
 metodo <- "kmeansbic" # clustering algorithm type. Options: medoides, elbow, calinski, ssi, bic

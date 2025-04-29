@@ -22,4 +22,6 @@ fi
 export R_TERRA_MAX_RAM_MB
 # End of workaround
 
+git submodule update --init
+
 singularity run --bind $PWD cwr_0.5.3.sif "capfitogen_master.R"

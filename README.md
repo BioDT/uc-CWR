@@ -25,8 +25,11 @@
 ## CAPFITOGEN
 
 As an addition to ModGP, you can run two of Capfitogen's most useful tools: ELC maps and Complementa maps to visualise overlap with protected areas.
+Because a lot of variables will be downloaded, the total memory requirements may be too large for most personal computers. Try with a subset of the data if necessary. 
 
-- After cloning this repository, you need to clone Capfitogen (a submodule) as well with `git submodule update --init`. 
+NB! After cloning this repository, you need to clone Capfitogen (a submodule) as well with `git submodule update --init`. 
+
+Alternative ways of running the capfitogen capabilities:
 
 - To run our version of CAPFITOGEN in [RStudio](https://posit.co/downloads/), open `capfitogen_master.R` and execute the code, changing inputs like species name and other parameters. The script guides you through the whole process.
 

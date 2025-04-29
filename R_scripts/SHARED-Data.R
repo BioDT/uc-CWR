@@ -559,7 +559,7 @@ FUN.DownCAPFITOGEN <-
 
       ### read in and format rasters one by one from file name ----
       rasters <- NULL
-      for (i in 1:50) { # length(file_list)
+      for (i in 1:length(file_list)) { # length(file_list)
         file_path_i <- file.path(Dir.Data.Envir, "capfitogen", file_list[i])
         raster_i <- rast(file_path_i)
         # rename raster
@@ -595,10 +595,16 @@ FUN.DownCAPFITOGEN <-
 
       # convert list of rasters to a stack
       rasters <- rast(rasters)
+      
+      # remove .tif extension from raster name
+      names(rasters) <- sub("\\.tif$", "", names(rasters))
 
       ## save rasters ----
       message(paste0("saving as netCDF:", FNAME))
-      terra::writeCDF(rasters, filename = FNAME, overwrite = TRUE)
+      terra::writeCDF(rasters, 
+                      varname = names(rasters), 
+                      filename = FNAME, 
+                      overwrite = TRUE)
       return(rasters)
     }
   }
