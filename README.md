@@ -1,4 +1,14 @@
-# uc-CWR
+# Use case Crop Wild Relatives (uc-CWR)
+
+This repository hosts code for a [Biodiversity Digital Twin](https://biodt.eu/) use case: the prototype Digital Twin for [Crop Wild Relatives](https://biodt.eu/use-cases/crop-wild-relatives). The prototype Digital Twin can be accessed through a grapical user interface made with R shiny and hosted on Lifewatch: [prototype digital twins GUI](http://app.biodt.lifewatch.eu/)
+
+> *"The Prototype Biodiversity Digital Twin (pDT) for Crop Wild Relatives is an advanced tool designed to aid in the identification and use of crop wild relatives (CWR) genetic resources to enhance crop resilience against climate-driven stresses"* [BioDT.eu/use-cases/crop-wild-relatives](https://biodt.eu/use-cases/crop-wild-relatives)
+
+For technical documentation, see a separate [markdown file](technical_documentation.md). Below we also outline quick instructions for running the ModGP and Capfitogen tools in R and on the LUMI supercomputer. The prototype Digital Twin is also presented in a 'Research ideas and outcomes' paper: [Chala et al. 2024](https://doi.org/10.3897/rio.10.e125192). The core functionality of the digital twin is ModGP (Modelling the GermPlasm of interest), but two of Capfitogen's tools have since been added to extend the prototype Digital Twin's usefulness.
+
+> *"MoDGP leverages species distribution modelling, relying on occurrence data of CWR to produce habitat suitability maps, establish mathematical correlations between adaptive traits, such as tolerance to drought and pathogens and environmental factors and facilitates mapping geographic areas where populations possessing genetic resources for resilience against various biotic and abiotic stresses are potentially growing."* [Chala et al. 2024](https://doi.org/10.3897/rio.10.e125192)
+
+---------------------------------
 
 ## ModGP on Rstudio
 
@@ -24,17 +34,17 @@
 
 ## CAPFITOGEN
 
-As an addition to ModGP, you can run two of Capfitogen's most useful tools: ELC maps and Complementa maps to visualise overlap with protected areas.
-Because a lot of variables will be downloaded, the total memory requirements may be too large for most personal computers. Try with a subset of the data if necessary. 
+As an addition to ModGP, you can run two of [Capfitogen](https://www.capfitogen.net/en/)'s most useful tools: [ecogeographic land characterization (ELC) maps](https://www.capfitogen.net/en/tools/elc-mapas/) and [Complementa](https://www.capfitogen.net/en/tools/complementa/) maps to visualise overlap with protected areas.
+Because a lot of variables will be downloaded and processed, the total memory requirements may be too large for most personal computers. Try with a subset of the data if necessary. 
 
 NB! After cloning this repository, you need to clone Capfitogen (a submodule) as well with `git submodule update --init`. 
 
 Alternative ways of running the capfitogen capabilities:
 
-- To run our version of CAPFITOGEN in [RStudio](https://posit.co/downloads/), open `capfitogen_master.R` and execute the code, changing inputs like species name and other parameters. The script guides you through the whole process.
+- To run our version of CAPFITOGEN in [RStudio](https://posit.co/downloads/), open `capfitogen_master.R` and execute the code, changing inputs like species name and other parameters. The script guides you through the whole process. After changing the species name, you can run the whole script as a background job if desired.
 
-- To run on LUMI: obtain interactive session:
-   `srun -p small --nodes=1 --ntasks-per-node=1 --mem=8G -t 4:00:00 --pty bash`
-   and execute the workflow:
-   `singularity run --bind $PWD cwr_0.2.0.sif capfitogen_master.R`
+- To run on LUMI (assumes access to LUMI and the project): Fetch the container (step 2 from ModGP above), then submit the job for a desired species (e.g. Lathyrus):
+
+       sbatch submit_capfitogen_prep_lumi.sh Lathyrus
+       sbatch submit_capfitogen_exec_lumi.sh Lathyrus
 
