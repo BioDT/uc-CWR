@@ -8,13 +8,29 @@ Scientific usefulness, written in R to be run on an hpc for a crop species or ge
 
 Main characteristics, script and workflow structure
 
+|File | Description |
+| --- | ----------- |
+
 ### Inputs
 
 ### Outputs
 
+----------------------
+
 ## Capfitogen
 
 Main characteristics, script and workflow structure.
+
+> Disclaimer: CAPFITOGEN is separate software that was created by others. See Parra-Quijano et al. 2021, <https://repositorio.unal.edu.co/handle/unal/85787> and [CAPFITOGEN.net](https://www.capfitogen.net/en/).
+
+Some files are shared between ModGP and capfitogen scripts (R_scripts/SHARED-Data.R and ModGP-commonlines.R). These files are specific only to capfitogen code:
+
+|File | Description |
+| --- | ----------- |
+| Capfitogen | the Capfitogen code repository. A submodule (repository within repository). |
+| capfitogen_master.R | Main code for setting up environment, downloading data, and executing capfitogen tools. |
+| submit_capfitogen_prep_lumi.sh | bash script to initialise capfitogen submodule and add a workaround fo memory issue. |
+| submit_capfitogen_exec_lumi.sh | bash script to execute (run) capfitogen_master.R on LUMI. |
 
 ![Figure: Illustration of scripts and data for running Capfitogen tools](capfitogen_master_illustration.drawio.svg)
 
