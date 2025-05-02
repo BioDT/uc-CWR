@@ -143,7 +143,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
         "blockCV", \
         "ecmwfr", \
         "giscoR", \
-        "tidyterra", \
         "geodata", \
         "mmap" \
         ))' && \
