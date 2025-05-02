@@ -1,13 +1,13 @@
 IMAGE_ROOT?=ghcr.io/biodt
 IMAGE=cwr
-IMAGE_VERSION=0.5.3
-R_VERSION=4.3.2
+IMAGE_VERSION=0.6.0
+R_VERSION=4.3.3
 
 
 build: Dockerfile
 	docker buildx build --platform linux/amd64 \
 		--label "org.opencontainers.image.source=https://github.com/BioDT/uc-CWR" \
-		--label "org.opencontainers.image.description=CWR environment with R $(R_VERSION)" \
+		--label "org.opencontainers.image.description=CWR environment" \
 		--build-arg R_VERSION=$(R_VERSION) \
 		-t $(IMAGE_ROOT)/$(IMAGE):$(IMAGE_VERSION) \
 		.
