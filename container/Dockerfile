@@ -56,13 +56,6 @@ RUN . /conda/etc/profile.d/conda.sh && \
     conda activate /conda/env && \
     conda install -c conda-forge --override-channels \
         r-rcpparmadillo=14.2.2-1 \
-        r-iterators=1.0.14 \
-        r-sp=2.1-3 \
-        r-raster=3.6-26 \
-        r-rgbif=3.8.0 \
-        r-rnaturalearth=1.0.1 \
-        r-rnaturalearthdata=1.0.0 \
-        r-ncdf4=1.22 \
         r-epi=2.47.1 \
         r-png=0.1-8 \
         r-keyring=1.3.2 \
@@ -83,16 +76,23 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-doParallel=1.0.17 \
         r-foreach=1.5.2 \
         r-doSNOW=1.0.20 \
-        r-automap=1.1-12 \
         r-fasterize=1.1.0 \
         r-stars=0.6-6 \
+        r-automap=1.1-12 \
+        r-cowplot=1.1.3 \
         r-ggplot2=3.5.1 \
+        r-ggpmisc=0.6.1 \
         r-ggpubr=0.6.0 \
+        r-gridExtra=2.3 \
+        r-ncdf4=1.22 \
+        r-raster=3.6-26 \
+        r-rgbif=3.8.0 \
+        r-rnaturalearth=1.0.1 \
+        r-rnaturalearthdata=1.0.0 \
+        r-sp=2.1-3 \
         r-tidyr=1.3.1 \
         r-viridis=0.6.5 \
-        r-cowplot=1.1.3 \
-        r-ggpmisc=0.6.1 \
-        r-gridExtra=2.3 \
+        r-iterators=1.0.14 \
 # Packages for capfitogen
         r-maptools=1.1-8 \
         r-dismo=1.3-16 \
