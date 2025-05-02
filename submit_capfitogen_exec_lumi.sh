@@ -12,4 +12,4 @@
 ##SBATCH --partition=standard --exclusive --mem=0
 ##SBATCH --partition=debug --exclusive --mem=0 --time=0:30:00
 
-singularity run --bind $PWD cwr_0.5.3.sif "capfitogen_master.R"
+singularity run --bind $PWD cwr_0.6.0.sif "capfitogen_master.R"

@@ -43,7 +43,10 @@ Alternative ways of running the capfitogen capabilities:
 
 - To run our version of CAPFITOGEN in [RStudio](https://posit.co/downloads/), open `capfitogen_master.R` and execute the code, changing inputs like species name and other parameters. The script guides you through the whole process. After changing the species name, you can run the whole script as a background job if desired.
 
-- To run on LUMI (assumes access to LUMI and the project): Fetch the container (step 2 from ModGP above), then submit the job for a desired species (e.g. Lathyrus):
+- To run on LUMI (assumes access to LUMI and the project): 
+
+1. Fetch the container: `singularity pull --disable-cache docker://ghcr.io/biodt/cwr:0.6.0`
+2. then submit the job for a desired species (e.g. Lathyrus):
 
        sbatch submit_capfitogen_prep_lumi.sh Lathyrus
        sbatch submit_capfitogen_exec_lumi.sh Lathyrus
