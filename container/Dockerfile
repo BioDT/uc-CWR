@@ -85,6 +85,7 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-ggpubr=0.6.0 \
         r-gridExtra=2.3 \
         r-ncdf4=1.22 \
+        r-maps=3.4.2.1 \
         r-raster=3.6-26 \
         r-rgbif=3.8.0 \
         r-rnaturalearth=1.0.1 \
@@ -93,6 +94,8 @@ RUN . /conda/etc/profile.d/conda.sh && \
         r-tidyr=1.3.1 \
         r-viridis=0.6.5 \
         r-iterators=1.0.14 \
+        r-rvest=1.0.4 \
+        r-gdalutilities=1.2.5 \
 # Packages for capfitogen
         r-maptools=1.1-8 \
         r-dismo=1.3-16 \
