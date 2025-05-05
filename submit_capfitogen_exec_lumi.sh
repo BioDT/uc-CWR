@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH -J capfitogen
 #SBATCH -o capfitogen-%j.out
-#SBATCH --account=project_465000915
+#SBATCH --account=project_465001987
 #SBATCH --nodes=1
 #SBATCH --tasks-per-node=1
 #SBATCH --cpus-per-task=128
