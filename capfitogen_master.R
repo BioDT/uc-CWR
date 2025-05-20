@@ -79,9 +79,9 @@ if (!exists("numberOfCores")) {
 message(sprintf("numberOfCores = %d", numberOfCores))
   
 # DATA ====================================================================
-message(paste("------------------------------", 
-              " starting data download/load  ",
-              "------------------------------", 
+message(paste("-----------------------------------", 
+              " starting GBIF data download/load  ",
+              "-----------------------------------", 
               sep = "\n"))
 
 ## Run SHARED-Data script -------------------------------------------------
@@ -100,6 +100,10 @@ Species_ls <- FUN.DownGBIF(
 )
 
 ## Environmental Data (CAPFITOGEN) --------------------------------------------
+message(paste("-------------------------------------------------------", 
+              " starting CAPFITOGEN environmental data download/load  ",
+              "-------------------------------------------------------", 
+              sep = "\n"))
 # make a template raster to resample to
 template_raster <- rast(nrows = 1800, 
                         ncols = 4320, 
@@ -116,6 +120,10 @@ all_predictors <- FUN.DownCAPFITOGEN(
 names(all_predictors)
 
 ## Protected areas database ---------------------------------------------------
+message(paste("----------------------------------------------", 
+              " starting protected areas data download/load  ",
+              "----------------------------------------------", 
+              sep = "\n"))
 #' download shapefiles for protected areas to overlay with Complementa tool.
 #' The FUN.DownWDPA function will save the file to a folder, but not load it 
 #' into RStudio as an object.
@@ -158,6 +166,10 @@ crop_to_native_range <- function(
   
   # proceed with cropping if native_range_map is valid
   if (!is.null(native_range_map)) {
+    message(paste("----------------------------------------", 
+              " cropping to native range  ",
+              "----------------------------------------", 
+              sep = "\n"))
     # attempt to load native range map safely
     tryCatch({
       native_range_raster <- rast(native_range_map)

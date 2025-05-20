@@ -162,86 +162,86 @@ FUN.DownGBIF <- function(
 	)
 	names(specs_ls) <- GBIF_specs
 	
-	## Making list into single data frame when Capfitogen mode is toggled on.
-	# HJ: section below to create a Capfitogen data frame not used
-	# species data included as the sf file created above
-	if(Mode == "Capfitogen"){
-	  message("Making data for Capfitogen mode")
-	  message(FNAME)
-		specs_ls <- specs_ls[[1]]
-		## create capfitogen data frame
-		CapfitogenColumns <- c("INSTCODE", 
-		                       "ACCENUMB", 
-		                       "COLLNUMB", 
-		                       "COLLCODE", 
-		                       "COLLNAME", 
-		                       "COLLINSTADDRESS", 
-		                       "COLLMISSID", 
-		                       "GENUS", 
-		                       "SPECIES", 
-		                       "SPAUTHOR", 
-		                       "SUBTAXA", 
-		                       "SUBTAUTHOR", 
-		                       "CROPNAME", 
-		                       "ACCENAME", 
-		                       "ACQDATE", 
-		                       "ORIGCTY", 
-		                       "NAMECTY", 
-		                       "ADM1", 
-		                       "ADM2", 
-		                       "ADM3", 
-		                       "ADM4", 
-		                       "COLLSITE", 
-		                       "DECLATITUDE", 
-		                       "LATITUDE", 
-		                       "DECLONGITUDE", 
-		                       "LONGITUDE", 
-		                       "COORDUNCERT", 
-		                       "COORDDATUM", 
-		                       "GEOREFMETH", 
-		                       "ELEVATION", 
-		                       "COLLDATE", 
-		                       "BREDCODE", 
-		                       "BREDNAME", 
-		                       "SAMPSTAT", 
-		                       "ANCEST", 
-		                       "COLLSRC", 
-		                       "DONORCODE", 
-		                       "DONORNAME", 
-		                       "DONORNUMB", 
-		                       "OTHERNUMB", 
-		                       "DUPLSITE", 
-		                       "DUPLINSTNAME", 
-		                       "STORAGE", 
-		                       "MLSSTAT", 
-		                       "REMARKS")
-		CapfitogenData <- data.frame(matrix(data = NA, 
-		                                    nrow = nrow(specs_ls), 
-		                                    ncol = length(CapfitogenColumns)))
-		colnames(CapfitogenData) <- CapfitogenColumns
-		## Create unique rownames for the ACCENUMB
-		CapfitogenData$ACCENUMB <- seq(from = 1, 
-		                               to = nrow(CapfitogenData), 
-		                               by = 1)
-		## Add in the species, latitude and longitude (nothing else at this point)
-		CapfitogenData$SPECIES <- specs_ls$species
-		CapfitogenData$DECLATITUDE <- st_coordinates(specs_ls)[,"Y"]
-		CapfitogenData$DECLONGITUDE <- st_coordinates(specs_ls)[,"X"]
-		specs_ls_capfitogen <- CapfitogenData
-	}
-	
-	### Returning Object to Disk and Environment ----
-	ifelse(Mode == "Capfitogen",
-	       occs = specs_ls_capfitogen,
-	       occs = specs_ls)
-	save_ls <- list(meta = occ_meta,
-									occs = occs
-									# json = JSON_ls
-									)
-	
-	saveObj(save_ls, file = FNAME)
-	unlink(occ_get) # removes .zip file
-	
+	# ## Making list into single data frame when Capfitogen mode is toggled on.
+	# # HJ: section below to create a Capfitogen data frame not used
+	# # species data included as the sf file created above
+	# if(Mode == "Capfitogen"){
+	#   message("Making data for Capfitogen mode")
+	#   message(FNAME)
+	# 	specs_ls <- specs_ls[[1]]
+	# 	## create capfitogen data frame
+	# 	CapfitogenColumns <- c("INSTCODE", 
+	# 	                       "ACCENUMB", 
+	# 	                       "COLLNUMB", 
+	# 	                       "COLLCODE", 
+	# 	                       "COLLNAME", 
+	# 	                       "COLLINSTADDRESS", 
+	# 	                       "COLLMISSID", 
+	# 	                       "GENUS", 
+	# 	                       "SPECIES", 
+	# 	                       "SPAUTHOR", 
+	# 	                       "SUBTAXA", 
+	# 	                       "SUBTAUTHOR", 
+	# 	                       "CROPNAME", 
+	# 	                       "ACCENAME", 
+	# 	                       "ACQDATE", 
+	# 	                       "ORIGCTY", 
+	# 	                       "NAMECTY", 
+	# 	                       "ADM1", 
+	# 	                       "ADM2", 
+	# 	                       "ADM3", 
+	# 	                       "ADM4", 
+	# 	                       "COLLSITE", 
+	# 	                       "DECLATITUDE", 
+	# 	                       "LATITUDE", 
+	# 	                       "DECLONGITUDE", 
+	# 	                       "LONGITUDE", 
+	# 	                       "COORDUNCERT", 
+	# 	                       "COORDDATUM", 
+	# 	                       "GEOREFMETH", 
+	# 	                       "ELEVATION", 
+	# 	                       "COLLDATE", 
+	# 	                       "BREDCODE", 
+	# 	                       "BREDNAME", 
+	# 	                       "SAMPSTAT", 
+	# 	                       "ANCEST", 
+	# 	                       "COLLSRC", 
+	# 	                       "DONORCODE", 
+	# 	                       "DONORNAME", 
+	# 	                       "DONORNUMB", 
+	# 	                       "OTHERNUMB", 
+	# 	                       "DUPLSITE", 
+	# 	                       "DUPLINSTNAME", 
+	# 	                       "STORAGE", 
+	# 	                       "MLSSTAT", 
+	# 	                       "REMARKS")
+	# 	CapfitogenData <- data.frame(matrix(data = NA, 
+	# 	                                    nrow = nrow(specs_ls), 
+	# 	                                    ncol = length(CapfitogenColumns)))
+	# 	colnames(CapfitogenData) <- CapfitogenColumns
+	# 	## Create unique rownames for the ACCENUMB
+	# 	CapfitogenData$ACCENUMB <- seq(from = 1, 
+	# 	                               to = nrow(CapfitogenData), 
+	# 	                               by = 1)
+	# 	## Add in the species, latitude and longitude (nothing else at this point)
+	# 	CapfitogenData$SPECIES <- specs_ls$species
+	# 	CapfitogenData$DECLATITUDE <- st_coordinates(specs_ls)[,"Y"]
+	# 	CapfitogenData$DECLONGITUDE <- st_coordinates(specs_ls)[,"X"]
+	# 	specs_ls_capfitogen <- CapfitogenData
+	# }
+	# 
+	# ### Returning Object to Disk and Environment ----
+	# ifelse(Mode == "Capfitogen",
+	#        occs = specs_ls_capfitogen,
+	#        occs = specs_ls)
+	# save_ls <- list(meta = occ_meta,
+	# 								occs = occs
+	# 								# json = JSON_ls
+	# 								)
+	# 
+	# saveObj(save_ls, file = FNAME)
+	# unlink(occ_get) # removes .zip file
+	# 
 	### JSON RO-CRATE creation ----
 	message("Create .json RO-crate (research object) metadata")
 	JSON_ls <- jsonlite::read_json("ro-crate-metadata.json")
@@ -286,7 +286,7 @@ FUN.DownGBIF <- function(
 	writeLines(jsonlite::toJSON(JSON_ls, pretty = TRUE), con)
 	close(con)
 	
-	save_ls
+	# save_ls
 }
 
 # BIOCLIMATIC DATA DOWNLOAD --------------------------------------------

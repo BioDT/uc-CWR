@@ -40,7 +40,7 @@
       "studySubject": [
         ["http://eurovoc.europa.eu/632"]
       ],
-      "datePublished": ["2025-01-27 19:07:06"],
+      "datePublished": ["2025-05-19 18:53:17"],
       "name": ["Cleaned GBIF occurrence records for species Lathyrus angulatus"],
       "encodingFormat": ["application/ld+json"],
       "mainEntity": ["Dataset"],
@@ -59,7 +59,7 @@
         ["File"]
       ],
       "name": ["Lathyrus angulatus.RData"],
-      "contentSize": [171823],
+      "contentSize": ["NA"],
       "encodingFormat": ["application/RData"]
     },
     {
