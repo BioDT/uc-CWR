@@ -1,5 +1,9 @@
 # uc-CWR
 
+## Initial setup
+
+1. Create a file `R_scripts/SHARED-APICredentials.R`. You can use [the example file](R_scripts/SHARED-APICredentials.example.R) as a template. Insert your [CDS API key](https://cds.climate.copernicus.eu/how-to-api) and [GBIF credentials](https://www.gbif.org/) in this file.
+
 ## ModGP on Rstudio
 
 1. Source `ModGP_MASTER.R` and change `SPECIES` argument at line 19 to execute ModGP pipeline for a specific genus.
