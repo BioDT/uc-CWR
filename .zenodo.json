@@ -1,9 +1,6 @@
 {
   "title": "BioDT/uc-CWR: Crop Wild Relative Digital Twin",
-  "description": "# BioDT: Crop Wild Relative prototype Digital Twin (CWR pDT) 
-The prototype digital twin (pDT) aids in searching and utilising CWR genetic resources. Using the MoDGP (Modelling the Germplasm of Interest) tool, the pDT enables mapping geographic areas where stress-tolerant CWR populations can be found. With its graphical user interface, it offers flexibility in selecting genetic resources from CWR tailored to enhance resilience of various crops against diverse stress factors.
-## Related publication
-Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi T, Martinovic T, Endresen D (2024) Prototype biodiversity digital twin: crop wild relatives genetic resources for food security. Research Ideas and Outcomes 10: e125192. https://doi.org/10.3897/rio.10.e125192",
+  "description": "BioDT: Crop Wild Relative prototype Digital Twin (CWR pDT) \n The prototype digital twin (pDT) aids in searching and utilising CWR genetic resources. Using the MoDGP (Modelling the Germplasm of Interest) tool, the pDT enables mapping geographic areas where stress-tolerant CWR populations can be found. With its graphical user interface, it offers flexibility in selecting genetic resources from CWR tailored to enhance resilience of various crops against diverse stress factors. \n Related publication: Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi T, Martinovic T, Endresen D (2024) Prototype biodiversity digital twin: crop wild relatives genetic resources for food security. Research Ideas and Outcomes 10: e125192. https://doi.org/10.3897/rio.10.e125192",
   "upload_type": "software",
   "publication_date": "2025-06-25",
   "license": "MIT",
