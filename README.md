@@ -48,4 +48,4 @@ Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi T, Martinovic T, Endresen 
 
 # Archived at Zenodo
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15696972.svg)](https://doi.org/10.5281/zenodo.15696972)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15696971.svg)](https://doi.org/10.5281/zenodo.15696971)
