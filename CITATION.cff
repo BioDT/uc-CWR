@@ -1,0 +1,105 @@
+cff-version: 1.2.0
+title: 'BioDT uc-CWR: Crop Wild Relative Digital Twin'
+message: "Biodiveristy Digital Twin (BioDT), Funded by the European Union \U0001F1EA\U0001F1FA https://doi.org/10.3030/101057437"
+type: software
+authors:
+  - given-names: Desalegn Chala
+    family-names: Gelete
+    email: d.c.gelete@nhm.uio.no
+    affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway
+    orcid: 'https://orcid.org/0000-0002-8045-6950'
+  - orcid: 'https://orcid.org/0000-0002-1825-0097'
+    given-names: Erik
+    family-names: Kusch
+    affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway; CICERO Center for International Climate
+      Research, Oslo, Norway
+  - orcid: 'https://orcid.org/0000-0002-8713-4559'
+    given-names: Tuomas
+    family-names: Rossi
+    affiliation: 'CSC – IT Center for Science Ltd., Espoo, Finland'
+  - given-names: Heli
+    family-names: Juottonen
+    orcid: 'https://orcid.org/0000-0003-3769-239X'
+    affiliation: 'CSC – IT Center for Science Ltd., Espoo, Finland'
+  - orcid: 'https://orcid.org/0000-0003-0351-6523'
+    given-names: Claus
+    family-names: Weiland
+    affiliation: >-
+      Senckenberg – Leibniz Institution for Biodiversity and
+      Earth System Research, Science IT, Frankfurt am Main,
+      Germany
+  - given-names: Jonas
+    family-names: Grieb
+    affiliation: >-
+      Senckenberg – Leibniz Institution for Biodiversity and
+      Earth System Research, Science IT, Frankfurt am Main,
+      Germany
+    orcid: 'https://orcid.org/0000-0002-8876-1722'
+  - family-names: Martinovič
+    given-names: Tomáš
+    orcid: 'https://orcid.org/0000-0002-0132-1434'
+    affiliation: >-
+      IT4Innovations, VSB - Technical University of Ostrava,
+      Ostrava-Poruba, Czech Republic
+  - orcid: 'https://orcid.org/0000-0002-0524-8334'
+    given-names: Carrie
+    family-names: Andrew
+    affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway; Royal Botanic Gardens, Kew: London, England
+  - given-names: Eva
+    family-names: Lieungh
+    orcid: 'https://orcid.org/0000-0003-4009-944X'
+    affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway
+  - orcid: 'https://orcid.org/0000-0002-2690-9509'
+    given-names: Michal
+    family-names: Torma
+    affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway
+  - affiliation: >-
+      University of Oslo, Natural History Museum, Oslo,
+      Norway
+    orcid: 'https://orcid.org/0000-0002-2352-5497'
+    given-names: Dag
+    family-names: Endresen
+    email: dag.endresen@nhm.uio.no
+identifiers:
+  - type: doi
+    value: 10.3897/rio.10.e125192
+    description: >-
+      Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi
+      T, Martinovic T, Endresen D (2024) Prototype
+      biodiversity digital twin: crop wild relatives genetic
+      resources for food security. Research Ideas and
+      Outcomes 10: e125192.
+  - type: doi
+    value: 10.5281/zenodo.15696971
+    description: >-
+      BioDT uc-CWR: Crop Wild Relative Digital Twin archived
+      at Zenodo
+repository-code: 'https://github.com/BioDT/uc-CWR/'
+url: 'https://biodt.eu/use-cases/crop-wild-relatives'
+abstract: >-
+  BioDT: Crop Wild Relative prototype Digital Twin (CWR
+  pDT). The prototype digital twin (pDT) aids in searching
+  and utilising CWR genetic resources. Using the MoDGP
+  (Modelling the Germplasm of Interest) tool, the pDT
+  enables mapping geographic areas where stress-tolerant CWR
+  populations can be found. With its graphical user
+  interface, it offers flexibility in selecting genetic
+  resources from CWR tailored to enhance the resilience of
+  various crops against diverse stress factors.
+keywords:
+  - Digital Twin
+  - BioDT
+  - Crop wild relative
+  - Plant Genetic Resources
+license: MIT
+date-released: '2025-06-27'
