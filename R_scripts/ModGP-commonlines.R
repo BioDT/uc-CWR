@@ -1,3 +1,7 @@
+#'###########################################################################
+#' 
+
+
 ## Default flags for runtime environment
 RUNNING_ON_LUMI <- FALSE
 RUNNING_ON_DESTINE <- FALSE
@@ -10,46 +14,81 @@ install.load.package <- function(x) {
 }
 ### CRAN PACKAGES ----
 package_vec <- c(
-	'cowplot', # grid plotting
-	'ggplot2', # ggplot machinery
-	'ggpmisc', # table plotting in ggplot environment
-	'ggpubr', # t-test comparison in ggplot
-	'gridExtra', # ggplot saving in PDF
-	'parallel', # parallel runs
-	'pbapply', # parallel runs with estimator bar
-	'raster', # spatial data
-	'remotes', # remote installation
-	'rgbif', # GBIF access
-	'rnaturalearth', # shapefiles
-	'sdm', # SDM machinery
-	'sf', # spatial data
-	'sp', # spatial data
-	'terra', # spatial data
-	'tidyr', # gather()
-	'usdm', # vifcor()
-	'viridis', # colour palette
-	'iterators'
+  'automap', # automatic interpolation (for KrigR)
+  'cowplot', # grid plotting
+  'curl', # downloading data
+  'ggplot2', # ggplot machinery
+  'ggpp',
+  'ggpmisc', # table plotting in ggplot environment
+  'ggpubr', # t-test comparison in ggplot
+  'gridExtra', # ggplot saving in PDF
+  'ncdf4', # handling NetCDF files
+  'maps', # background maps
+  'parallel', # parallel runs
+  'pbapply', # parallel runs with estimator bar
+  'raster', # spatial data ----------------------- should be replaced by terra
+  'remotes', # remote installation
+  'rgbif', # GBIF access
+  'rnaturalearth', # shapefiles
+  'rnaturalearthdata', # needed for FUN.Down.BV()
+  'sdm', # SDM machinery
+  'sf', # spatial data
+  'sp', # spatial data
+  'terra', # spatial data
+  'tidyr', # gather()
+  'usdm', # vifcor()
+  'viridis', # colour palette
+  'bit64',
+  'iterators',
+  'rvest', # to scrape google drive html
+  'gdalUtilities', # to download from SoilGrids (FUN.DownEV)
+  
+  # # Capfitogen SelectVar packages 
+  # # HJ: added here from Capfitogen SelectVar script. To do: remove unnecessary ones
+  # 'dismo',
+  # 'cluster',
+  # 'ade4',
+  # 'labdsv',
+  # 'mclust',
+  # 'clustvarsel',
+  # 'ranger',
+  
+  # Capfitogen ECLmapas packages
+  # HJ: added here from Capfitogen ECLmapas script. To do: remove unnecessary ones
+  'flexmix',
+  'fpc',
+  'vegan',
+  'adegenet' #find.clusters ELCmap.R
 )
+
 sapply(package_vec, install.load.package)
 
 ### NON-CRAN PACKAGES ----
-if(packageVersion("KrigR") < "0.9.6.1"){ # KrigR check
-	devtools::install_github("https://github.com/ErikKusch/KrigR", ref = "Development")
+# check if KrigR is missing or outdated 
+if(packageVersion("KrigR") < "0.9.6.1" ||
+   "KrigR" %in% rownames(installed.packages()) == FALSE) {
+  message("installing KrigR from github.com/ErikKusch/KrigR")
+  devtools::install_github("https://github.com/ErikKusch/KrigR",
+                           ref = "Development")
 }
 library(KrigR)
 
-if("mraster" %in% rownames(installed.packages()) == FALSE){ # KrigR check
-	remotes::install_github("babaknaimi/mraster")
+if ("mraster" %in% rownames(installed.packages()) == FALSE) {
+  # KrigR check
+  remotes::install_github("babaknaimi/mraster")
 }
 library(mraster)
 
-if(!("maxent" %in% unlist(getmethodNames()))){sdm::installAll()} # install methods for sdm package
+if (!("maxent" %in% unlist(getmethodNames()))) {
+  sdm::installAll()
+} # install methods for sdm package
 
 ## updating package_vec for handling of parallel environments
 package_vec <- c(package_vec, "KrigR", "mraster")
 
 ## Functionality ----------------------------------------------------------
-`%nin%` <- Negate(`%in%`) # a function for negation of %in% function
+#' a function for negation of %in% function
+`%nin%` <- Negate(`%in%`) 
 
 #' Progress bar for data loading
 saveObj <- function(object, file.name){
@@ -78,8 +117,19 @@ Dir.Data <- file.path(Dir.Base, "Data")
 Dir.Data.ModGP <- file.path(Dir.Data, "ModGP")
 Dir.Data.GBIF <- file.path(Dir.Data, "GBIF")
 Dir.Data.Envir <- file.path(Dir.Data, "Environment")
+Dir.Data.Capfitogen <- file.path(Dir.Data, "Capfitogen")
 Dir.Exports <- file.path(Dir.Base, "Exports")
 Dir.Exports.ModGP <- file.path(Dir.Exports, "ModGP")
+Dir.Exports.Capfitogen <- file.path(Dir.Exports, "Capfitogen")
+Dir.R_scripts <- file.path(Dir.Base, "R_scripts")
+Dir.Capfitogen <- file.path(Dir.Base, "Capfitogen")
+Dir.Capfitogen.WDPA <- file.path(Dir.Capfitogen, "wdpa")
+Dir.Capfitogen.ELCMap <- file.path(Dir.Capfitogen, "ELCmapas")
+Dir.Capfitogen.Error <- file.path(Dir.Capfitogen, "Error")
+Dir.Results <- file.path(Dir.Base, "results")
+Dir.Results.Complementa <- file.path(Dir.Results, "Complementa")
+Dir.Results.Complementa.Error <- file.path(Dir.Results.Complementa, "Error")
+
 ### Create directories which aren't present yet
 Dirs <- grep(ls(), pattern = "Dir.", value = TRUE)
 CreateDir <- sapply(Dirs, function(x){
@@ -87,7 +137,4 @@ CreateDir <- sapply(Dirs, function(x){
 	if(!dir.exists(x)) dir.create(x)})
 rm(Dirs)
 
-## Sourcing ---------------------------------------------------------------
-source(file.path(Dir.Scripts,"SHARED-Data.R"))
-source(file.path(Dir.Scripts,"ModGP-SDM.R"))
-source(file.path(Dir.Scripts,"ModGP-Outputs.R"))
+# End of file

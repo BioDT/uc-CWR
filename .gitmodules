@@ -1,0 +1,4 @@
+[submodule "Capfitogen"]
+	path = Capfitogen
+	url = https://github.com/evalieungh/Capfitogen.git
+	ignore = dirty
