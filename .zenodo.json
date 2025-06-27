@@ -1,0 +1,92 @@
+{
+  "title": "BioDT/uc-CWR: Crop Wild Relative Digital Twin",
+  "description": "BioDT: Crop Wild Relative prototype Digital Twin (CWR pDT) \n The prototype digital twin (pDT) aids in searching and utilising CWR genetic resources. Using the MoDGP (Modelling the Germplasm of Interest) tool, the pDT enables mapping geographic areas where stress-tolerant CWR populations can be found. With its graphical user interface, it offers flexibility in selecting genetic resources from CWR tailored to enhance resilience of various crops against diverse stress factors. \n Related publication: Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi T, Martinovic T, Endresen D (2024) Prototype biodiversity digital twin: crop wild relatives genetic resources for food security. Research Ideas and Outcomes 10: e125192. https://doi.org/10.3897/rio.10.e125192",
+  "upload_type": "software",
+  "publication_date": "2025-06-25",
+  "license": "MIT",
+  "language": "eng",
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "scheme": "url",
+      "relation": "isSupplementTo",
+      "identifier": "https://github.com/BioDT/uc-CWR/releases/latest"
+    },
+    {
+      "scheme": "doi",
+      "identifier": "https://doi.org/10.3897/rio.10.e125192",
+      "resource_type": "publication-article",
+      "relation": "isSupplementTo"
+    }
+  ],
+  "creators": [
+    {
+      "name": "Desalegn Chala Gelete",
+      "orcid": "0000-0002-8045-6950",
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway",
+      "type": "ProjectLeader"
+    },
+    {
+      "name": "Erik Kusch",
+      "orcid": "0000-0002-1825-0097",
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway; CICERO Center for International Climate Research, Oslo, Norway",
+      "type": "Researcher"
+    }
+  ],
+  "contributors": [
+    {
+      "name": "Tuomas Rossi",
+      "orcid": "0000-0002-8713-4559"
+      "affiliation": "CSC – IT Center for Science Ltd., Espoo, Finland",
+      "type": "Researcher"
+    },
+    {
+      "name": "Heli Juottonen",
+      "orcid": "0000-0003-3769-239X"
+      "affiliation": "CSC – IT Center for Science Ltd., Espoo, Finland",
+      "type": "Researcher"
+    },
+    {
+      "name": "Claus Weiland",
+      "orcid": "0000-0003-0351-6523"
+      "affiliation": "Senckenberg – Leibniz Institution for Biodiversity and Earth System Research, Science IT, Frankfurt am Main, Germany",
+      "type": "Researcher"
+    },
+    {
+      "name": "Jonas Grieb",
+      "orcid": "0000-0002-8876-1722"
+      "affiliation": "Senckenberg – Leibniz Institution for Biodiversity and Earth System Research, Science IT, Frankfurt am Main, Germany",
+      "type": "Engineer"
+    },
+    {
+      "name": "Tomáš Martinovič",
+      "orcid": "0000-0002-0132-1434"
+      "affiliation": "IT4Innovations, VSB - Technical University of Ostrava, Ostrava-Poruba, Czech Republic",
+      "type": "Researcher"
+    },
+    {
+      "name": "Carrie Andrew",
+      "orcid": "0000-0002-0524-8334"
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway; Royal Botanic Gardens, Kew: London, England",
+      "type": "Researcher"
+    },
+    {
+      "name": "Eva Lieungh",
+      "orcid": "0000-0003-4009-944X"
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway",
+      "type": "Researcher"
+    },
+    {
+      "name": "Michal Torma",
+      "orcid": "0000-0002-2690-9509"
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway",
+      "type": "Engineer"
+    },
+    {
+      "name": "Dag Endresen",
+      "orcid": "0000-0002-2352-5497"
+      "affiliation": "University of Oslo, Natural History Museum, Oslo, Norway",
+      "type": "ProjectLeader"
+    }
+  ]
+}
