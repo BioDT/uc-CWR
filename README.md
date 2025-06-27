@@ -43,3 +43,9 @@ See [documentation](https://www.capfitogen.net/en).
    and execute the workflow:
    `singularity run --bind $PWD cwr_0.2.0.sif capfitogen.R`
 
+# Related publication
+Chala D, Kusch E, Weiland C, Andrew C, Grieb J, Rossi T, Martinovic T, Endresen D (2024) Prototype biodiversity digital twin: crop wild relatives genetic resources for food security. Research Ideas and Outcomes 10: e125192. https://doi.org/10.3897/rio.10.e125192
+
+# Archived at Zenodo
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15696972.svg)](https://doi.org/10.5281/zenodo.15696972)
